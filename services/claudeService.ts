@@ -1,5 +1,3 @@
-
-
 import Anthropic from "@anthropic-ai/sdk";
 import { PROMPT_TEMPLATE, NEWSLETTER_PROMPT_TEMPLATE, DASHBOARD_ANALYSIS_PROMPT_TEMPLATE, LANGUAGES } from '../constants';
 
@@ -43,6 +41,11 @@ const cleanResponse = (text: string): string => {
     return cleanedText;
 }
 
+const extractTextContent = (response: Anthropic.Message): string => {
+    const firstBlock = response.content[0];
+    return firstBlock.type === 'text' ? firstBlock.text : '';
+}
+
 export async function generateWebsite(
     { description, userName, businessName, userEmail, userPhone, paletteName, paletteDetails, modificationPrompt }: WebsiteParams
 ): Promise<string> {
@@ -71,7 +74,7 @@ export async function generateWebsite(
       }]
     });
 
-    const generatedHtml = cleanResponse(websiteResponse.content[0].type === 'text' ? websiteResponse.content[0].text : '');
+    const generatedHtml = cleanResponse(extractTextContent(websiteResponse));
     return generatedHtml;
 
   } catch (error) {
@@ -104,7 +107,7 @@ export async function generateNewsletter(
             }]
         });
 
-        return cleanResponse(newsletterResponse.content[0].type === 'text' ? newsletterResponse.content[0].text : '');
+        return cleanResponse(extractTextContent(newsletterResponse));
 
     } catch(error) {
         console.error("Error during newsletter generation:", error);
@@ -135,7 +138,7 @@ export async function analyzeAndTranslateDashboard(
             }]
         });
         
-        return cleanResponse(analysisResponse.content[0].type === 'text' ? analysisResponse.content[0].text : '');
+        return cleanResponse(extractTextContent(analysisResponse));
 
     } catch (error) {
         console.error("Error during dashboard analysis:", error);
