@@ -16,6 +16,8 @@ export interface AppContextType {
   setPageState: (state: 'form' | 'loading' | 'result' | 'dashboard') => void;
   language: string;
   setLanguage: (lang: string) => void;
+  aiProvider: string;
+  setAiProvider: (provider: string) => void;
   error: string | null;
   setError: (error: string | null) => void;
   handleGenerate: () => Promise<void>;

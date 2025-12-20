@@ -9,9 +9,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react-dom": "^19.1.1",
+    "@anthropic-ai/sdk": "^0.71.2",
     "@google/genai": "^1.12.0",
     "react": "^19.1.1",
+    "react-dom": "^19.1.1",
     "react-router-dom": "6.25.1"
   },
   "devDependencies": {

@@ -3,8 +3,8 @@
 import React, { useState, useCallback, createContext, useContext, useEffect } from 'react';
 import { Header } from './components/Header';
 import { LoadingSpinner } from './components/LoadingSpinner';
-import { generateWebsite, generateNewsletter, analyzeAndTranslateDashboard } from './services/geminiService';
-import { LANGUAGES, TRANSLATIONS, COLOR_PALETTES } from './constants';
+import { generateWebsite, generateNewsletter, analyzeAndTranslateDashboard } from './services/aiService';
+import { LANGUAGES, TRANSLATIONS, COLOR_PALETTES, AI_PROVIDERS } from './constants';
 import { useSpeechToText } from './hooks/useSpeechToText';
 import { useTextToSpeech } from './hooks/useTextToSpeech';
 import { AppContextType } from './types';
@@ -32,6 +32,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [isGeneratingPost, setIsGeneratingPost] = useState(false);
   const [pageState, setPageState] = useState<'form' | 'loading' | 'result' | 'dashboard'>('form');
   const [language, setLanguage] = useState(LANGUAGES[0].value);
+  const [aiProvider, setAiProvider] = useState(AI_PROVIDERS[0].value);
   const [error, setError] = useState<string | null>(null);
 
   const t = useCallback((key: string): string => {
@@ -61,7 +62,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         paletteName: selectedPalette,
         paletteDetails,
         modificationPrompt: modPrompt,
-      });
+      }, aiProvider as 'gemini' | 'claude');
       if (code.trim().toLowerCase().startsWith('<!doctype html')) {
         setGeneratedCode(code);
         setPageState('result');
@@ -83,7 +84,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     } finally {
         if (modPrompt) setModificationPrompt('');
     }
-  }, [prompt, userName, businessName, userEmail, userPhone, selectedPalette, generatedCode, t]);
+  }, [prompt, userName, businessName, userEmail, userPhone, selectedPalette, generatedCode, aiProvider, t]);
   
   const handleGenerate = () => handleGenerateWrapper();
   
@@ -103,7 +104,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         const newsletterText = await generateNewsletter({
             description: prompt,
             businessName,
-        });
+        }, aiProvider as 'gemini' | 'claude');
         setNewsletter(newsletterText);
     } catch(err) {
         console.error(err);
@@ -112,7 +113,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     } finally {
         setIsGeneratingPost(false);
     }
-  }, [prompt, businessName, generatedUrl]);
+  }, [prompt, businessName, generatedUrl, aiProvider]);
 
   const reset = () => {
     setPrompt('');
@@ -136,7 +137,7 @@ const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   };
 
   const value = {
-    prompt, setPrompt, generatedCode, pageState, setPageState, language, setLanguage, error, setError,
+    prompt, setPrompt, generatedCode, pageState, setPageState, language, setLanguage, aiProvider, setAiProvider, error, setError,
     handleGenerate, reset, t, userName, setUserName, businessName, setBusinessName,
     userEmail, setUserEmail, userPhone, setUserPhone, selectedPalette, setSelectedPalette,
     modificationPrompt, setModificationPrompt, handleAssist, generatedUrl, newsletter, 
@@ -154,7 +155,7 @@ const FormView: React.FC = () => {
     const { 
         t, userName, setUserName, businessName, setBusinessName, userEmail, setUserEmail, 
         userPhone, setUserPhone, prompt, setPrompt, selectedPalette, setSelectedPalette,
-        handleGenerate, language, error
+        handleGenerate, language, aiProvider, setAiProvider, error
     } = context;
 
     const { isListening, error: speechError, toggleListening } = useSpeechToText({ onTranscript: setPrompt, lang: language });
@@ -242,6 +243,27 @@ const FormView: React.FC = () => {
                           ))}
                       </div>
                       
+                      {/* AI Provider Selection */}
+                      <div className="mt-6">
+                          <h4 className="text-lg font-semibold text-gray-700 mb-2">{t('aiProviderLabel')}</h4>
+                          <p className="text-gray-500 text-sm mb-3">{t('aiProviderSubtitle')}</p>
+                          <div className="flex gap-4">
+                              {AI_PROVIDERS.map(provider => (
+                                  <button
+                                      key={provider.value}
+                                      onClick={() => setAiProvider(provider.value)}
+                                      className={`px-6 py-2 rounded-lg font-medium transition ${
+                                          aiProvider === provider.value
+                                              ? 'bg-lime-500 text-white'
+                                              : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                                      }`}
+                                  >
+                                      {provider.label}
+                                  </button>
+                              ))}
+                          </div>
+                      </div>
+                      
                       {error && <p className="text-red-500 mt-6 text-center font-medium">{error}</p>}
 
                       <div className="mt-8 pt-6 border-t border-gray-200 text-center">
@@ -285,7 +307,7 @@ const DashboardPage: React.FC = () => {
   const { isSpeaking, speak, cancel } = useTextToSpeech();
   
   if (!context) return null;
-  const { t, businessName, userName, userEmail, userPhone, setPageState, language, error, setError, generatedCode } = context;
+  const { t, businessName, userName, userEmail, userPhone, setPageState, language, aiProvider, error, setError, generatedCode } = context;
 
   const handleAnalyze = async () => {
     if (isSpeaking) {
@@ -311,7 +333,7 @@ const DashboardPage: React.FC = () => {
       const result = await analyzeAndTranslateDashboard({
         dashboardData,
         language,
-      });
+      }, aiProvider as 'gemini' | 'claude');
       setAnalysisResult(result);
       speak(result, language);
     } catch (err) {

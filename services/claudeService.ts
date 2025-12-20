@@ -1,16 +1,16 @@
 
 
-import { GoogleGenAI } from "@google/genai";
+import Anthropic from "@anthropic-ai/sdk";
 import { PROMPT_TEMPLATE, NEWSLETTER_PROMPT_TEMPLATE, DASHBOARD_ANALYSIS_PROMPT_TEMPLATE, LANGUAGES } from '../constants';
 
-const API_KEY = process.env.GEMINI_API_KEY;
+const API_KEY = process.env.ANTHROPIC_API_KEY;
 
 if (!API_KEY) {
-  throw new Error("GEMINI_API_KEY environment variable not set.");
+  throw new Error("ANTHROPIC_API_KEY environment variable not set.");
 }
 
-const ai = new GoogleGenAI({ apiKey: API_KEY });
-const model = "gemini-2.5-flash";
+const anthropic = new Anthropic({ apiKey: API_KEY });
+const model = "claude-3-5-sonnet-20241022";
 
 interface WebsiteParams {
     description: string;
@@ -61,17 +61,17 @@ export async function generateWebsite(
         .replace('{PALETTE_DETAILS}', paletteDetails)
         .replace('{MODIFICATION_SECTION}', modificationSection);
 
-    const websiteResponse = await ai.models.generateContent({
+    const websiteResponse = await anthropic.messages.create({
       model: model,
-      contents: textPrompt,
-       config: {
-        temperature: 0.7, 
-        topP: 0.95,
-        thinkingConfig: { thinkingBudget: 0 },
-      },
+      max_tokens: 4096,
+      temperature: 0.7,
+      messages: [{
+        role: "user",
+        content: textPrompt
+      }]
     });
 
-    const generatedHtml = cleanResponse(websiteResponse.text);
+    const generatedHtml = cleanResponse(websiteResponse.content[0].type === 'text' ? websiteResponse.content[0].text : '');
     return generatedHtml;
 
   } catch (error) {
@@ -80,9 +80,9 @@ export async function generateWebsite(
         if (error.message.includes('400')) {
             throw new Error('The generated prompt is too large. Please try a shorter description.');
         }
-        throw new Error(`Gemini API Error: ${error.message}`);
+        throw new Error(`Claude API Error: ${error.message}`);
     }
-    throw new Error("An unknown error occurred while communicating with the Gemini API.");
+    throw new Error("An unknown error occurred while communicating with the Claude API.");
   }
 }
 
@@ -94,21 +94,22 @@ export async function generateNewsletter(
             .replace('{BUSINESS_NAME}', businessName)
             .replace('{USER_INPUT}', description);
 
-        const newsletterResponse = await ai.models.generateContent({
+        const newsletterResponse = await anthropic.messages.create({
             model: model,
-            contents: finalPrompt,
-            config: {
-                temperature: 0.8,
-                topP: 0.95,
-            }
+            max_tokens: 2048,
+            temperature: 0.8,
+            messages: [{
+                role: "user",
+                content: finalPrompt
+            }]
         });
 
-        return cleanResponse(newsletterResponse.text);
+        return cleanResponse(newsletterResponse.content[0].type === 'text' ? newsletterResponse.content[0].text : '');
 
     } catch(error) {
         console.error("Error during newsletter generation:", error);
         if (error instanceof Error) {
-            throw new Error(`Gemini API Error: ${error.message}`);
+            throw new Error(`Claude API Error: ${error.message}`);
         }
         throw new Error("An unknown error occurred while generating the newsletter.");
     }
@@ -124,20 +125,22 @@ export async function analyzeAndTranslateDashboard(
             .replace('{LANGUAGE_NAME}', langDetails.label)
             .replace('{LANGUAGE_CODE}', langDetails.value);
 
-        const analysisResponse = await ai.models.generateContent({
+        const analysisResponse = await anthropic.messages.create({
             model: model,
-            contents: finalPrompt,
-            config: {
-                temperature: 0.5,
-            }
+            max_tokens: 1024,
+            temperature: 0.5,
+            messages: [{
+                role: "user",
+                content: finalPrompt
+            }]
         });
         
-        return cleanResponse(analysisResponse.text);
+        return cleanResponse(analysisResponse.content[0].type === 'text' ? analysisResponse.content[0].text : '');
 
     } catch (error) {
         console.error("Error during dashboard analysis:", error);
         if (error instanceof Error) {
-            throw new Error(`Gemini API Error: ${error.message}`);
+            throw new Error(`Claude API Error: ${error.message}`);
         }
         throw new Error("An unknown error occurred while analyzing the dashboard.");
     }

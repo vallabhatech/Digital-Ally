@@ -4,6 +4,11 @@ export const LANGUAGES = [
     { label: 'हिन्दी', value: 'hi-IN' },
 ];
 
+export const AI_PROVIDERS = [
+    { label: 'Gemini', value: 'gemini' },
+    { label: 'Claude', value: 'claude' },
+];
+
 export const COLOR_PALETTES = [
     { name: 'Modern', palette: { bg: 'bg-white', primary: 'bg-indigo-600', text: 'text-gray-800', subtle: 'bg-gray-50' }, description: "Primary: Indigo for trust and modernity. Use for buttons, links, and key highlights. Backgrounds: White and light gray for a clean, spacious feel. Text: Dark gray for readability." },
     { name: 'Vibrant', palette: { bg: 'bg-white', primary: 'bg-orange-500', text: 'text-gray-900', subtle: 'bg-yellow-50' }, description: "Primary: Bright orange for energy and creativity. Use for calls-to-action. Backgrounds: Soft yellow and white for a warm, inviting atmosphere. Text: Nearly black for strong contrast." },
@@ -48,6 +53,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     step2Subtitle: 'Use your voice or type in any language. Be as descriptive as you can!',
     step3Title: '3. Style',
     step3Subtitle: 'Select a color palette that fits your brand.',
+    aiProviderLabel: 'AI Provider',
+    aiProviderSubtitle: 'Choose which AI to use for generation.',
     listening: 'Listening...',
     startListening: 'Start Listening',
     stopListening: 'Stop Listening',
