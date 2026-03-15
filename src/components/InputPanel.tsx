@@ -5,8 +5,19 @@ import { COLOR_PALETTES } from '../constants';
 import { CheckIcon, MicrophoneIcon, SparklesIcon } from './icons';
 
 export const InputPanel: React.FC = () => {
+    console.log('InputPanel rendering...');
     const context = useContext(AppContext);
-    if (!context) return null;
+    console.log('Context value:', context);
+    
+    if (!context) {
+        console.log('Context is null!');
+        return (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+                <h1>Loading Context...</h1>
+                <p>AppContext is not available yet</p>
+            </div>
+        );
+    }
     
     const { 
         t, userName, setUserName, businessName, setBusinessName, userEmail, setUserEmail, 

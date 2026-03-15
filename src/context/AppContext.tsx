@@ -6,6 +6,7 @@ import { AppContextType } from '../types';
 export const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  console.log('AppProvider rendering...');
   const [userName, setUserName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -29,6 +30,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Retry system fields
   const [lastPrompt, setLastPrompt] = useState('');
   const [retryCount, setRetryCount] = useState(0);
+
+  console.log('AppProvider state initialized');
 
   const t = useCallback((key: string): string => {
     return TRANSLATIONS[language]?.[key] || TRANSLATIONS['en-US'][key];
@@ -168,5 +171,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     lastPrompt, setLastPrompt, retryCount, setRetryCount, handleRetry
   };
 
+  console.log('AppProvider providing context with value:', value);
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
