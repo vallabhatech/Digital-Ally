@@ -20,6 +20,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [pageState, setPageState] = useState<'form' | 'loading' | 'result' | 'dashboard'>('form');
   const [language, setLanguage] = useState(LANGUAGES[0].value);
   const [error, setError] = useState<string | null>(null);
+  
+  // New fields for enhanced InputPanel
+  const [services, setServices] = useState('');
+  const [location, setLocation] = useState('');
+  const [themeColor, setThemeColor] = useState('#10b981');
+  
+  // Retry system fields
+  const [lastPrompt, setLastPrompt] = useState('');
+  const [retryCount, setRetryCount] = useState(0);
 
   const t = useCallback((key: string): string => {
     return TRANSLATIONS[language]?.[key] || TRANSLATIONS['en-US'][key];
@@ -30,6 +39,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setError(t('errorFormNotComplete'));
       return;
     }
+    
+    // Store the current prompt for retry functionality
+    setLastPrompt(prompt);
     setPageState('loading');
     setError(null);
     setGeneratedUrl('');
@@ -54,6 +66,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         setPageState('result');
         const dataUrl = `data:text/html;charset=utf-8,${encodeURIComponent(code)}`;
         setGeneratedUrl(dataUrl);
+        // Reset retry count on successful generation
+        setRetryCount(0);
 
       } else {
         setError(t('updateFailed'));
@@ -67,6 +81,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setError(`Failed to generate website: ${errorMessage}`);
       setGeneratedCode(generatedCode || '');
       setPageState('result');
+      // Increment retry count on failure
+      setRetryCount(prev => prev + 1);
     } finally {
         if (modPrompt) setModificationPrompt('');
     }
@@ -101,6 +117,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, [prompt, businessName, generatedUrl]);
 
+  const handleSelectExample = (examplePrompt: string) => {
+    setPrompt(examplePrompt);
+    setPageState('form');
+  };
+
+  const handleRetry = useCallback(async () => {
+    // Check if we've exceeded max retry attempts (3 attempts)
+    if (retryCount >= 3) {
+      setError('Maximum retry attempts reached. Please try again with different inputs.');
+      return;
+    }
+
+    // Use the last prompt for retry
+    if (lastPrompt) {
+      setPrompt(lastPrompt);
+      await handleGenerateWrapper();
+    } else {
+      setError('No previous prompt to retry.');
+    }
+  }, [lastPrompt, retryCount, handleGenerateWrapper]);
+
   const reset = () => {
     setPrompt('');
     setUserName('');
@@ -115,11 +152,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setModificationPrompt('');
     setError(null);
     setPageState('form');
-  };
-  
-  const handleSelectExample = (examplePrompt: string) => {
-    setPrompt(examplePrompt);
-    setPageState('form');
+    // Reset retry fields
+    setLastPrompt('');
+    setRetryCount(0);
   };
 
   const value = {
@@ -127,7 +162,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     handleGenerate, reset, t, userName, setUserName, businessName, setBusinessName,
     userEmail, setUserEmail, userPhone, setUserPhone, selectedPalette, setSelectedPalette,
     modificationPrompt, setModificationPrompt, handleAssist, generatedUrl, newsletter, 
-    isGeneratingPost, handleGenerateNewsletter, handleSelectExample
+    isGeneratingPost, handleGenerateNewsletter, handleSelectExample,
+    // New fields
+    services, setServices, location, setLocation, themeColor, setThemeColor,
+    lastPrompt, setLastPrompt, retryCount, setRetryCount, handleRetry
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

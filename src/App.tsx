@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AppProvider } from './context/AppContext';
 import { Header } from './components/Header';
 import { LoadingSpinner } from './components/LoadingSpinner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { HomePage } from './pages/HomePage';
 import { ResultPage } from './pages/ResultPage';
 import { DashboardPage } from './pages/DashboardPage';
@@ -36,11 +37,13 @@ const AppContent: React.FC = () => {
 
 const App: React.FC = () => {
     return (
-        <Router>
-            <AppProvider>
-                <AppContent />
-            </AppProvider>
-        </Router>
+        <ErrorBoundary>
+            <Router>
+                <AppProvider>
+                    <AppContent />
+                </AppProvider>
+            </Router>
+        </ErrorBoundary>
     );
 };
 

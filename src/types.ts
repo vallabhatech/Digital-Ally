@@ -29,6 +29,19 @@ export interface AppContextType {
   isGeneratingPost: boolean;
   handleGenerateNewsletter: () => Promise<void>;
   handleSelectExample: (prompt: string) => void;
+  // New fields for enhanced InputPanel
+  services: string;
+  setServices: (services: string) => void;
+  location: string;
+  setLocation: (location: string) => void;
+  themeColor: string;
+  setThemeColor: (color: string) => void;
+  // Retry system fields
+  lastPrompt: string;
+  setLastPrompt: (prompt: string) => void;
+  retryCount: number;
+  setRetryCount: (count: number) => void;
+  handleRetry: () => Promise<void>;
 }
 
 export enum OutputView {
