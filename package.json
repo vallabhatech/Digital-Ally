@@ -1,5 +1,5 @@
 {
-  "name": "",
+  "name": "digital-ally",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,8 +14,11 @@
     "typecheck": "tsc --noEmit",
     "preview": "vite preview",
     "start:server": "node server/index.js",
-    "test": "vitest run",
-    "test:watch": "vitest"
+    "test:unit": "vitest run",
+    "test:unit:watch": "vitest",
+    "test:unit:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@google/genai": "^1.12.0",
@@ -37,12 +40,14 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
+    "@playwright/test": "^1.61.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^22.14.0",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@types/react-lazy-load-image-component": "^1.6.5",
+    "@vitest/coverage-v8": "^4.1.9",
     "eslint": "^9.17.0",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.1.0",

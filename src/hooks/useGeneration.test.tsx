@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGeneration } from '@/hooks/useGeneration';
-import * as geminiService from '@/features/generation/geminiService';
+import * as geminiService from '@/services/geminiService';
 
 const mockT = vi.fn((key: string) => key);
 

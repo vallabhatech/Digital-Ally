@@ -46,6 +46,12 @@ export interface AppContextType {
   retryCount: number;
   setRetryCount: (count: number) => void;
   handleRetry: () => Promise<void>;
+  healthStatus: {
+    ok: boolean;
+    checked: boolean;
+    retrying: boolean;
+    message: string;
+  };
 }
 
 export enum OutputView {

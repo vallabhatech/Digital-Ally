@@ -10,9 +10,7 @@ import {
   validateSchema,
 } from "@/shared/validation";
 
-// Define the full strict TypeScript interface state contract
 interface AppState {
-  // Pure State Values
   privacyMode: AiProcessingMode | null;
   userName: string;
   businessName: string;
@@ -33,8 +31,8 @@ interface AppState {
   themeColor: string;
   lastPrompt: string;
   retryCount: number;
+  healthStatus: string;
 
-  // Actions Mutators
   setField: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
   setPrivacyMode: (mode: AiProcessingMode) => void;
   clearPrivateData: () => void;
@@ -42,7 +40,6 @@ interface AppState {
   handleSelectExample: (examplePrompt: string) => void;
   reset: () => void;
   
-  // Custom Hook Functional Pipeline Proxies
   t: (key: string, params?: Record<string, string | number>) => string;
   handleGenerate: () => Promise<void>;
   handleAssist: () => Promise<void>;
@@ -53,7 +50,6 @@ interface AppState {
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // --- Default State Initializers ---
       privacyMode: typeof window !== "undefined" ? loadPrivacyPreference()?.mode || null : null,
       userName: "",
       businessName: "",
@@ -74,11 +70,10 @@ export const useAppStore = create<AppState>()(
       themeColor: "#10b981",
       lastPrompt: "",
       retryCount: 0,
+      healthStatus: "",
 
-      // --- Centralized Setter Mutator ---
       setField: (key, value) => set({ [key]: value }),
 
-      // --- Localization Translation Method ---
       t: (key, params) => {
         const { language } = get();
         let message = TRANSLATIONS[language]?.[key] || TRANSLATIONS["en-US"]?.[key] || key;
@@ -99,7 +94,6 @@ export const useAppStore = create<AppState>()(
         set({ prompt: examplePrompt, pageState: "form" });
       },
 
-      // --- Generation Workflows Operations Pipeline ---
       handleGenerate: async () => {
         const s = get();
         const formData = sanitizeFormData({
@@ -116,7 +110,6 @@ export const useAppStore = create<AppState>()(
 
         set({ lastPrompt: s.prompt, pageState: "loading", error: null, generatedUrl: "", newsletter: "" });
 
-        // Instantiating hook execution flow matching context behavior
         const { generateWebsiteContent } = useGeneration({ t: s.t });
         const result = await generateWebsiteContent(formData, undefined, {
           onRetry: (attempt, err) => {
@@ -142,10 +135,10 @@ export const useAppStore = create<AppState>()(
       handleAssist: async () => {
         const s = get();
         const validation = validateSchema(
-  modificationSchema,
-  sanitizeFormData({ modificationPrompt: s.modificationPrompt }),
-  s.t
-) as { success: boolean; data: { modificationPrompt: string }; firstError: string };
+          modificationSchema,
+          sanitizeFormData({ modificationPrompt: s.modificationPrompt }),
+          s.t
+        ) as any;
 
         if (validation.success === false) {
           set({ error: validation.firstError });
@@ -227,7 +220,6 @@ export const useAppStore = create<AppState>()(
         }
       },
 
-      // --- Cleanup Actions Resetters ---
       reset: () => set({
         prompt: "",
         userName: "",
@@ -247,6 +239,7 @@ export const useAppStore = create<AppState>()(
         services: "",
         location: "",
         themeColor: "#10b981",
+        healthStatus: "",
       }),
 
       clearPrivateData: () => {
@@ -261,10 +254,9 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: "digital-ally-state-storage", // local persistence key name
+      name: "digital-ally-state-storage",
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        // Selectively pick which values should persist in localStorage
         userName: state.userName,
         businessName: state.businessName,
         userEmail: state.userEmail,

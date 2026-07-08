@@ -7,8 +7,8 @@ on:
     branches: [main, master, dev]
 
 jobs:
-  validate:
-    name: Lint, Typecheck, and Build
+  validate-and-test:
+    name: Lint, Typecheck, Test, and Build
     runs-on: ubuntu-latest
 
     steps:
@@ -36,5 +36,14 @@ jobs:
       - name: Typecheck
         run: npm run typecheck
 
-      - name: Build verification
+      - name: Build production bundle
         run: npm run build
+
+      - name: Run unit and integration tests with coverage
+        run: npm run test:unit:coverage
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e

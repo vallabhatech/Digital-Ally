@@ -9,7 +9,7 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { PaletteSelector } from '@/components/PaletteSelector';
 
 export const InputPanel: React.FC = () => {
-    // 1. Centralized Zustand Store Selectors
+    // Zustand Store Selectors
     const t = useAppStore((state) => state.t);
     const userName = useAppStore((state) => state.userName);
     const businessName = useAppStore((state) => state.businessName);
@@ -22,10 +22,10 @@ export const InputPanel: React.FC = () => {
     const selectedPalette = useAppStore((state) => state.selectedPalette);
     const language = useAppStore((state) => state.language);
     const error = useAppStore((state) => state.error);
+    const healthStatus = useAppStore((state) => state.healthStatus);
     const handleGenerate = useAppStore((state) => state.handleGenerate);
     const setField = useAppStore((state) => state.setField);
 
-    // Form value binding object for hook validation layers
     const formValues = {
         userName,
         businessName,
@@ -36,9 +36,9 @@ export const InputPanel: React.FC = () => {
         location,
         themeColor,
         selectedPalette,
+        healthStatus,
     };
 
-    // 2. Form Validation Hook Layer
     const {
         errors,
         markTouched,
@@ -47,15 +47,9 @@ export const InputPanel: React.FC = () => {
         isFormValid,
     } = useFormValidation({ schema: websiteFormSchema, values: formValues, t });
 
-    // Helper bridging callback to sync speech-to-text with Zustand values
     const setPrompt = useCallback((val: string) => setField('prompt', val), [setField]);
-
-    const { isListening, error: speechError, toggleListening } = useSpeechToText({ 
-        onTranscript: setPrompt, 
-        lang: language 
-    });
-
-    // 3. Local UI Interactive State
+    const { isListening, error: speechError, toggleListening } = useSpeechToText({ onTranscript: setPrompt, lang: language });
+    
     const [unlockedSections, setUnlockedSections] = useState({
         details: false,
         description: false,
@@ -234,7 +228,6 @@ export const InputPanel: React.FC = () => {
                     </SectionCard>
                 )}
 
-                {/* Step 3: Services */}
                 {unlockedSections.services && (
                     <SectionCard
                         title="Services & Products"

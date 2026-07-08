@@ -47,9 +47,9 @@ function sendError(res, statusCode, code, message, details = null, meta = null) 
 
 const PORT = process.env.PORT || 5174;
 
-if (!process.env.GEMINI_API_KEY) {
-  console.error('GEMINI_API_KEY not set in server environment. Exiting.');
-  process.exit(1);
+const hasGeminiApiKey = Boolean(process.env.GEMINI_API_KEY);
+if (!hasGeminiApiKey) {
+  console.warn('GEMINI_API_KEY not set in server environment. Health checks will report the server as misconfigured.');
 }
 
 const SERVER_CLIENT_TOKEN = process.env.SERVER_CLIENT_TOKEN || null;
@@ -59,7 +59,14 @@ if (!SERVER_CLIENT_TOKEN) {
   );
 }
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+let ai = null;
+function getGeminiClient() {
+  if (ai) return ai;
+  if (!process.env.GEMINI_API_KEY) return null;
+  ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+  return ai;
+}
+
 const serverConfig = getServerConfig();
 const CONSENT_VERSION = serverConfig.consentVersion;
 const API_VERSION = 'v1';
@@ -343,9 +350,14 @@ const aiRouteMiddleware = [
 ];
 
 async function callGemini(task, prompt) {
+  const client = getGeminiClient();
+  if (!client) {
+    throw new Error('Gemini API is not configured on the server.');
+  }
+
   const config = getServerConfig();
   const model = getModelForTask(task);
-  const response = await ai.models.generateContent({
+  const response = await client.models.generateContent({
     model,
     contents: prompt,
     config: {
@@ -481,8 +493,57 @@ async function handleCentralizedAiGenerate(req, res) {
   return handleAnalysisGeneration(req, res);
 }
 
-function handleHealth(req, res) {
-  return res.json({ ok: true, redis: redis.status });
+async function checkGeminiHealth() {
+  const client = getGeminiClient();
+  if (!process.env.GEMINI_API_KEY || !client) {
+    return {
+      ok: false,
+      configured: false,
+      reachable: false,
+      message: 'Gemini API key is not configured on the server.',
+    };
+  }
+
+  try {
+    const model = getModelForTask('website');
+    await client.models.generateContent({
+      model,
+      contents: 'health check',
+      config: {
+        temperature: 0,
+        topP: 0,
+      },
+    });
+
+    return {
+      ok: true,
+      configured: true,
+      reachable: true,
+      message: 'Gemini API is reachable.',
+      model,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      configured: true,
+      reachable: false,
+      message: error instanceof Error ? error.message : 'Gemini API is unreachable.',
+    };
+  }
+}
+
+async function handleHealth(req, res) {
+  const gemini = await checkGeminiHealth();
+  return res.status(gemini.ok ? 200 : 503).json({
+    ok: gemini.ok,
+    redis: redis.status,
+    gemini: {
+      configured: gemini.configured,
+      reachable: gemini.reachable,
+      message: gemini.message,
+      model: gemini.model || null,
+    },
+  });
 }
 
 function handleConfig(req, res) {
@@ -612,10 +673,14 @@ app.get('/api/logs', requireAdmin, handleLogs);
 app.get(`/api/${API_VERSION}/audit`, requireAdmin, handleAudit);
 app.get('/api/audit', requireAdmin, handleAudit);
 
-app.listen(PORT, () => {
-  console.log(`AI gateway listening on port ${PORT}`);
-  console.log(`Models: website=${getModelForTask('website')}, newsletter=${getModelForTask('newsletter')}, analysis=${getModelForTask('analysis')}`);
-});
+if (process.env.NODE_ENV !== 'test') {
+  app.listen(PORT, () => {
+    console.log(`AI gateway listening on port ${PORT}`);
+    console.log(`Models: website=${getModelForTask('website')}, newsletter=${getModelForTask('newsletter')}, analysis=${getModelForTask('analysis')}`);
+  });
+}
+
+export { app, handleHealth, checkGeminiHealth };
 
 process.on('SIGTERM', async () => {
   if (redis?.status === 'ready') await redis.quit();

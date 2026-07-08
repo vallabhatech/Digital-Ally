@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import { analyzeAndTranslateDashboard } from '@/features/generation/geminiService';
+import { analyzeAndTranslateDashboard } from '@/services/geminiService';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LazyImage } from '@/components/LazyImage';
 import { 

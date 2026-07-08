@@ -105,6 +105,10 @@ Default API URL:
 http://localhost:5174
 ```
 
+## 🩺 Server Health Check
+
+The backend now exposes a health endpoint at `/api/health` that verifies the Gemini API key is present and that the Gemini API can be reached before generation requests are allowed. The frontend checks this endpoint on startup, displays a warning if the server is misconfigured, and disables the generation buttons until the health check passes.
+
 ## 📜 Available Scripts
 
 | Script | Description |
