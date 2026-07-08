@@ -40,7 +40,7 @@ export function useGeneration({ t }: UseGenerationProps) {
     ): Promise<WebsiteGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(websiteFormSchema, sanitized, t);
-      if ('firstError' in validation) {
+      
       if (!validation.success) {
         return { success: false, error: validation.firstError };
       }
@@ -84,7 +84,7 @@ export function useGeneration({ t }: UseGenerationProps) {
     async (formState: Record<string, string>): Promise<NewsletterGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(newsletterFormSchema, sanitized, t);
-      if ('firstError' in validation) {
+      
       if (!validation.success) {
         return { success: false, error: validation.firstError };
       }

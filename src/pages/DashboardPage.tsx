@@ -1,5 +1,5 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '@/app/context/AppContext';
+import React, { useState } from 'react';
+import { useAppStore } from '@/store/useAppStore';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { analyzeAndTranslateDashboard } from '@/features/generation/geminiService';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -21,13 +21,25 @@ const DashboardCard: React.FC<{ title: string, icon: React.ReactNode, children: 
 );
 
 export const DashboardPage: React.FC = () => {
-  const context = useContext(AppContext);
+  // 1. Zustand Store Selectors
+  const t = useAppStore((state) => state.t);
+  const businessName = useAppStore((state) => state.businessName);
+  const userName = useAppStore((state) => state.userName);
+  const userEmail = useAppStore((state) => state.userEmail);
+  const userPhone = useAppStore((state) => state.userPhone);
+  const language = useAppStore((state) => state.language);
+  const error = useAppStore((state) => state.error);
+  const generatedCode = useAppStore((state) => state.generatedCode);
+  const setField = useAppStore((state) => state.setField);
+
+  // Helper mapping to bridge old state triggers smoothly
+  const setPageState = (val: "form" | "loading" | "result" | "dashboard") => setField('pageState', val);
+  const setError = (val: string | null) => setField('error', val);
+
+  // 2. Local State variables & Custom hooks
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const { isSpeaking, speak, cancel } = useTextToSpeech();
-  
-  if (!context) return null;
-  const { t, businessName, userName, userEmail, userPhone, setPageState, language, error, setError, generatedCode } = context;
 
   const handleAnalyze = async () => {
     if (isSpeaking) {

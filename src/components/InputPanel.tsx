@@ -1,32 +1,31 @@
-import React, { useState, useContext, useCallback, useEffect } from 'react';
-import { AppContext } from '@/app/context/AppContext';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useAppStore } from '@/store/useAppStore';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { websiteFormSchema } from '@/shared/validation';
 import { ValidatedField } from '@/components/ValidatedField';
-import { CheckIcon, MicrophoneIcon, SparklesIcon } from '@/components/IconSet';
+import { MicrophoneIcon, SparklesIcon } from '@/components/IconSet';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { PaletteSelector } from '@/components/PaletteSelector';
 
 export const InputPanel: React.FC = () => {
-    const context = useContext(AppContext);
-    
-    if (!context) {
-        return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h1>Loading Context...</h1>
-                <p>AppContext is not available yet</p>
-            </div>
-        );
-    }
-    
-    const { 
-        t, userName, setUserName, businessName, setBusinessName, userEmail, setUserEmail, 
-        userPhone, setUserPhone, prompt, setPrompt, selectedPalette, setSelectedPalette,
-        handleGenerate, language, error, services, setServices, location, setLocation,
-        themeColor, setThemeColor
-    } = context;
+    // 1. Centralized Zustand Store Selectors
+    const t = useAppStore((state) => state.t);
+    const userName = useAppStore((state) => state.userName);
+    const businessName = useAppStore((state) => state.businessName);
+    const userEmail = useAppStore((state) => state.userEmail);
+    const userPhone = useAppStore((state) => state.userPhone);
+    const prompt = useAppStore((state) => state.prompt);
+    const services = useAppStore((state) => state.services);
+    const location = useAppStore((state) => state.location);
+    const themeColor = useAppStore((state) => state.themeColor);
+    const selectedPalette = useAppStore((state) => state.selectedPalette);
+    const language = useAppStore((state) => state.language);
+    const error = useAppStore((state) => state.error);
+    const handleGenerate = useAppStore((state) => state.handleGenerate);
+    const setField = useAppStore((state) => state.setField);
 
+    // Form value binding object for hook validation layers
     const formValues = {
         userName,
         businessName,
@@ -39,6 +38,7 @@ export const InputPanel: React.FC = () => {
         selectedPalette,
     };
 
+    // 2. Form Validation Hook Layer
     const {
         errors,
         markTouched,
@@ -47,7 +47,15 @@ export const InputPanel: React.FC = () => {
         isFormValid,
     } = useFormValidation({ schema: websiteFormSchema, values: formValues, t });
 
-    const { isListening, error: speechError, toggleListening } = useSpeechToText({ onTranscript: setPrompt, lang: language });
+    // Helper bridging callback to sync speech-to-text with Zustand values
+    const setPrompt = useCallback((val: string) => setField('prompt', val), [setField]);
+
+    const { isListening, error: speechError, toggleListening } = useSpeechToText({ 
+        onTranscript: setPrompt, 
+        lang: language 
+    });
+
+    // 3. Local UI Interactive State
     const [unlockedSections, setUnlockedSections] = useState({
         details: false,
         description: false,
@@ -110,7 +118,7 @@ export const InputPanel: React.FC = () => {
                                     type="text"
                                     value={userName}
                                     onChange={(e) => {
-                                        setUserName(e.target.value);
+                                        setField('userName', e.target.value);
                                         markTouched('userName');
                                     }}
                                     onBlur={() => markTouched('userName')}
@@ -130,7 +138,7 @@ export const InputPanel: React.FC = () => {
                                     type="text"
                                     value={businessName}
                                     onChange={(e) => {
-                                        setBusinessName(e.target.value);
+                                        setField('businessName', e.target.value);
                                         markTouched('businessName');
                                     }}
                                     onBlur={() => markTouched('businessName')}
@@ -150,7 +158,7 @@ export const InputPanel: React.FC = () => {
                                     type="email"
                                     value={userEmail}
                                     onChange={(e) => {
-                                        setUserEmail(e.target.value);
+                                        setField('userEmail', e.target.value);
                                         markTouched('userEmail');
                                     }}
                                     onBlur={() => markTouched('userEmail')}
@@ -171,7 +179,7 @@ export const InputPanel: React.FC = () => {
                                     type="tel"
                                     value={userPhone}
                                     onChange={(e) => {
-                                        setUserPhone(e.target.value);
+                                        setField('userPhone', e.target.value);
                                         markTouched('userPhone');
                                     }}
                                     onBlur={() => markTouched('userPhone')}
@@ -200,7 +208,7 @@ export const InputPanel: React.FC = () => {
                                         {...fieldProps}
                                         value={prompt}
                                         onChange={(e) => {
-                                            setPrompt(e.target.value);
+                                            setField('prompt', e.target.value);
                                             markTouched('prompt');
                                         }}
                                         onBlur={() => markTouched('prompt')}
@@ -243,7 +251,7 @@ export const InputPanel: React.FC = () => {
                                     {...fieldProps}
                                     value={services}
                                     onChange={(e) => {
-                                        setServices(e.target.value);
+                                        setField('services', e.target.value);
                                         markTouched('services');
                                     }}
                                     onBlur={() => markTouched('services')}
@@ -274,7 +282,7 @@ export const InputPanel: React.FC = () => {
                                         type="text"
                                         value={location}
                                         onChange={(e) => {
-                                            setLocation(e.target.value);
+                                            setField('location', e.target.value);
                                             markTouched('location');
                                         }}
                                         onBlur={() => markTouched('location')}
@@ -295,7 +303,7 @@ export const InputPanel: React.FC = () => {
                                             type="color"
                                             value={themeColor}
                                             onChange={(e) => {
-                                                setThemeColor(e.target.value);
+                                                setField('themeColor', e.target.value);
                                                 markTouched('themeColor');
                                             }}
                                             onBlur={() => markTouched('themeColor')}
@@ -307,7 +315,7 @@ export const InputPanel: React.FC = () => {
                                             type="text"
                                             value={themeColor}
                                             onChange={(e) => {
-                                                setThemeColor(e.target.value);
+                                                setField('themeColor', e.target.value);
                                                 markTouched('themeColor');
                                             }}
                                             onBlur={() => markTouched('themeColor')}
@@ -324,7 +332,7 @@ export const InputPanel: React.FC = () => {
                             <PaletteSelector
                                 selectedPalette={selectedPalette}
                                 onSelectPalette={(palette) => {
-                                    setSelectedPalette(palette);
+                                    setField('selectedPalette', palette);
                                     markTouched('selectedPalette');
                                 }}
                                 error={errors.selectedPalette}

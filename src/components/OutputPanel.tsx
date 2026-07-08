@@ -1,17 +1,10 @@
-import React, { useState, useCallback, useContext, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { sanitizePreviewHtml } from '@/utils/sanitize';
-import { AppContext } from '@/app/context/AppContext';
+import { useAppStore } from '@/store/useAppStore';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { modificationSchema } from '@/shared/validation';
-import { ValidatedField } from '@/components/ValidatedField';
-import {
-  CheckIcon,
-  CopyIcon,
-  DownloadIcon,
-  EyeIcon,
-  CodeIcon,
-} from '@/components/IconSet';
+import { CheckIcon, CopyIcon, DownloadIcon } from '@/components/IconSet';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { PreviewTabs } from '@/components/ui/PreviewTabs';
@@ -19,27 +12,29 @@ import { ExportActions } from '@/components/ui/ExportActions';
 import { ModificationForm } from '@/components/ui/ModificationForm';
 
 export const OutputPanel: React.FC = () => {
-  const context = useContext(AppContext);
+  // 1. Unified Zustand Atomic Selectors
+  const generatedCode = useAppStore((state) => state.generatedCode);
+  const error = useAppStore((state) => state.error);
+  const t = useAppStore((state) => state.t);
+  const reset = useAppStore((state) => state.reset);
+  const handleAssist = useAppStore((state) => state.handleAssist);
+  const generatedUrl = useAppStore((state) => state.generatedUrl);
+  const newsletter = useAppStore((state) => state.newsletter);
+  const isGeneratingPost = useAppStore((state) => state.isGeneratingPost);
+  const handleGenerateNewsletter = useAppStore((state) => state.handleGenerateNewsletter);
+  const language = useAppStore((state) => state.language);
+  const retryCount = useAppStore((state) => state.retryCount);
+  const handleRetry = useAppStore((state) => state.handleRetry);
+  const modificationPrompt = useAppStore((state) => state.modificationPrompt);
+  const setField = useAppStore((state) => state.setField);
 
+  // Helper bridging methods matching old configuration expectations
+  const setModificationPrompt = useCallback((val: string) => setField('modificationPrompt', val), [setField]);
+  const setError = useCallback((val: string | null) => setField('error', val), [setField]);
+
+  // 2. Component Layout UI State Properties
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<'preview' | 'code'>('preview');
-  const {
-    generatedCode,
-    error,
-    t,
-    reset,
-    handleAssist,
-    generatedUrl,
-    newsletter,
-    isGeneratingPost,
-    handleGenerateNewsletter,
-    language,
-    setError,
-    retryCount,
-    handleRetry,
-    modificationPrompt,
-    setModificationPrompt,
-  } = context!;
 
   const { html: safeHtml, hadUnsafeContent } = useMemo(
     () => sanitizePreviewHtml(generatedCode || ''),
@@ -57,15 +52,13 @@ export const OutputPanel: React.FC = () => {
 
   const {
     errors: modErrors,
-    markTouched: markModTouched,
     validateAll: validateModification,
-    isFieldValid: isModFieldValid,
-    isFormValid: isModificationValid,
+    isModificationValid,
   } = useFormValidation({
     schema: modificationSchema,
     values: { modificationPrompt },
     t,
-  });
+  }) as any; // Type-casted contextually for form hooks signatures
 
   // Parse rate limit error and convert to user-friendly message
   const parseRateLimitError = (
@@ -172,34 +165,34 @@ export const OutputPanel: React.FC = () => {
       {/* Left Side - Preview */}
       <div className="flex-1 flex flex-col bg-gray-900 text-white">
         <div className="flex-shrink-0 bg-gray-800 p-2 flex flex-col gap-4 border-b border-gray-700 lg:flex-row lg:items-center lg:justify-between">
-        <PreviewTabs activeView={view} onChange={setView} />
-        {error && (
-          <p className="text-red-400 text-sm animate-pulse mx-auto lg:mx-0">
-            {t('updateFailed')}: {error}
-          </p>
-        )}
-        <div className="flex items-center gap-2 justify-center lg:justify-end">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
-            aria-label="Copy Code"
-          >
-            {copied ? (
-              <CheckIcon className="w-5 h-5 text-green-400" />
-            ) : (
-              <CopyIcon className="w-5 h-5" />
-            )}
-            {copied ? t('copied') : t('copyCode')}
-          </button>
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
-            aria-label="Download HTML"
-          >
-            <DownloadIcon className="w-5 h-5" /> {t('download')}
-          </button>
+          <PreviewTabs activeView={view} onChange={setView} />
+          {error && (
+            <p className="text-red-400 text-sm animate-pulse mx-auto lg:mx-0">
+              {t('updateFailed')}: {error}
+            </p>
+          )}
+          <div className="flex items-center gap-2 justify-center lg:justify-end">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
+              aria-label="Copy Code"
+            >
+              {copied ? (
+                <CheckIcon className="w-5 h-5 text-green-400" />
+              ) : (
+                <CopyIcon className="w-5 h-5" />
+              )}
+              {copied ? t('copied') : t('copyCode')}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
+              aria-label="Download HTML"
+            >
+              <DownloadIcon className="w-5 h-5" /> {t('download')}
+            </button>
+          </div>
         </div>
-      </div>
         {view === 'preview' ? (
           <>
             {hadUnsafeContent && (

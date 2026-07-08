@@ -1,5 +1,5 @@
-import React, { useContext } from 'react';
-import { AppProvider, AppContext } from '@/app/context/AppContext';
+import React from 'react';
+import { useAppStore } from '@/store/useAppStore';
 import { Header } from '@/components/Header';
 import { HomePage } from '@/pages/HomePage';
 import { ResultPage } from '@/pages/ResultPage';
@@ -7,11 +7,11 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrivacyModal } from '@/components/PrivacyModal';
 
-const AppContent: React.FC = () => {
-  const context = useContext(AppContext);
-  if (!context) return null;
-
-  const { pageState, privacyMode, setPrivacyMode } = context;
+const App: React.FC = () => {
+  // Pull values and setters directly from the Zustand store
+  const pageState = useAppStore((state) => state.pageState);
+  const privacyMode = useAppStore((state) => state.privacyMode);
+  const setPrivacyMode = useAppStore((state) => state.setPrivacyMode);
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -31,11 +31,5 @@ const AppContent: React.FC = () => {
     </div>
   );
 };
-
-const App: React.FC = () => (
-  <AppProvider>
-    <AppContent />
-  </AppProvider>
-);
 
 export default App;
