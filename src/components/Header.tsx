@@ -14,6 +14,7 @@ export const Header: React.FC = () => {
   const clearPrivateData = useAppStore((state) => state.clearPrivateData);
   const handleSelectExample = useAppStore((state) => state.handleSelectExample);
 
+
   // 2. Functional wrappers to adapt old setter states safely
   const setLanguage = (val: string) => setField('language', val);
   const setPageState = (val: "form" | "loading" | "result" | "dashboard") => setField('pageState', val);

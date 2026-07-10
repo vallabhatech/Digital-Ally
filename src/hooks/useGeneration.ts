@@ -32,8 +32,8 @@ export function useGeneration({ t }: UseGenerationProps) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
         return { error: errorMessage };
       }
-    },
-    [t]
+    }
+    ,[t]
   );
 
   const generateNewsletterContent = useCallback(
