@@ -20,6 +20,7 @@ Digital Ally (formerly BizBoost) is an advanced AI-powered platform designed to 
 ## 🛠️ Tech Stack
 
 - **Frontend Framework**: [React 19](https://react.dev/)
+- **State Management**: [Zustand](https://zustand-demo.pmnd.rs/) (persistent slices for user, business, draft, generation, and UI)
 - **Build Tool**: [Vite](https://vitejs.dev/)
 - **Language**: [TypeScript](https://www.typescriptlang.org/)
 - **Styling**: [Tailwind CSS](https://tailwindcss.com/)
@@ -168,6 +169,9 @@ digital-ally/
 │   ├── features/
 │   │   └── generation/
 │   │       └── geminiService.ts
+│   ├── store/
+│   │   ├── useAppStore.ts
+│   │   └── selectors.ts
 │   └── shared/
 │       ├── constants.ts
 │       ├── privacy.ts

@@ -1,6 +1,17 @@
 /** Strip non-printable control characters from user input. */
 export function stripControlChars(value: string): string {
-  return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+  let out = '';
+  for (const ch of value) {
+    const code = ch.charCodeAt(0);
+    const isForbidden =
+      (code >= 0x00 && code <= 0x08) ||
+      code === 0x0b ||
+      code === 0x0c ||
+      (code >= 0x0e && code <= 0x1f) ||
+      code === 0x7f;
+    if (!isForbidden) out += ch;
+  }
+  return out;
 }
 
 /** Trim and strip control characters from a string field. */

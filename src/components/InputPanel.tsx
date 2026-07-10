@@ -1,5 +1,22 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import {
+  selectBusinessName,
+  selectError,
+  selectHandleGenerate,
+  selectHealthStatus,
+  selectLanguage,
+  selectLocation,
+  selectPrompt,
+  selectSelectedPalette,
+  selectServices,
+  selectSetField,
+  selectThemeColor,
+  selectTranslator,
+  selectUserEmail,
+  selectUserName,
+  selectUserPhone,
+} from '@/store/selectors';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { websiteFormSchema } from '@/shared/validation';
@@ -9,345 +26,347 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { PaletteSelector } from '@/components/PaletteSelector';
 
 export const InputPanel: React.FC = () => {
-    // Zustand Store Selectors
-    const t = useAppStore((state) => state.t);
-    const userName = useAppStore((state) => state.userName);
-    const businessName = useAppStore((state) => state.businessName);
-    const userEmail = useAppStore((state) => state.userEmail);
-    const userPhone = useAppStore((state) => state.userPhone);
-    const prompt = useAppStore((state) => state.prompt);
-    const services = useAppStore((state) => state.services);
-    const location = useAppStore((state) => state.location);
-    const themeColor = useAppStore((state) => state.themeColor);
-    const selectedPalette = useAppStore((state) => state.selectedPalette);
-    const language = useAppStore((state) => state.language);
-    const error = useAppStore((state) => state.error);
-    const healthStatus = useAppStore((state) => state.healthStatus);
-    const handleGenerate = useAppStore((state) => state.handleGenerate);
-    const setField = useAppStore((state) => state.setField);
+  const t = useAppStore(selectTranslator);
+  const userName = useAppStore(selectUserName);
+  const businessName = useAppStore(selectBusinessName);
+  const userEmail = useAppStore(selectUserEmail);
+  const userPhone = useAppStore(selectUserPhone);
+  const prompt = useAppStore(selectPrompt);
+  const services = useAppStore(selectServices);
+  const location = useAppStore(selectLocation);
+  const themeColor = useAppStore(selectThemeColor);
+  const selectedPalette = useAppStore(selectSelectedPalette);
+  const language = useAppStore(selectLanguage);
+  const error = useAppStore(selectError);
+  const healthStatus = useAppStore(selectHealthStatus);
+  const handleGenerate = useAppStore(selectHandleGenerate);
+  const setField = useAppStore(selectSetField);
 
-    const formValues = {
-        userName,
-        businessName,
-        userEmail,
-        userPhone,
-        prompt,
-        services,
-        location,
-        themeColor,
-        selectedPalette,
-        healthStatus,
-    };
+  const formValues = {
+    userName,
+    businessName,
+    userEmail,
+    userPhone,
+    prompt,
+    services,
+    location,
+    themeColor,
+    selectedPalette,
+    healthStatus,
+  };
 
-    const {
-        errors,
-        markTouched,
-        validateAll,
-        isFieldValid,
-        isFormValid,
-    } = useFormValidation({ schema: websiteFormSchema, values: formValues, t });
+  const { errors, markTouched, validateAll, isFieldValid, isFormValid } = useFormValidation({
+    schema: websiteFormSchema,
+    values: formValues,
+    t,
+  });
 
-    const setPrompt = useCallback((val: string) => setField('prompt', val), [setField]);
-    const { isListening, error: speechError, toggleListening } = useSpeechToText({ onTranscript: setPrompt, lang: language });
-    
-    const [unlockedSections, setUnlockedSections] = useState({
-        details: false,
-        description: false,
-        services: false,
-        style: false,
+  const setPrompt = useCallback((val: string) => setField('prompt', val), [setField]);
+  const {
+    isListening,
+    error: speechError,
+    toggleListening,
+  } = useSpeechToText({ onTranscript: setPrompt, lang: language });
+
+  const [unlockedSections, setUnlockedSections] = useState({
+    details: false,
+    description: false,
+    services: false,
+    style: false,
+  });
+
+  const detailsComplete =
+    !errors.userName &&
+    !errors.businessName &&
+    !errors.userEmail &&
+    !errors.userPhone &&
+    userName.trim() !== '' &&
+    businessName.trim() !== '' &&
+    userEmail.trim() !== '' &&
+    userPhone.trim() !== '';
+  const descriptionComplete = !errors.prompt && prompt.trim() !== '';
+  const servicesComplete = !errors.services && services.trim() !== '';
+
+  useEffect(() => {
+    setUnlockedSections({
+      details: detailsComplete,
+      description: detailsComplete,
+      services: detailsComplete && descriptionComplete,
+      style: detailsComplete && descriptionComplete && servicesComplete,
     });
+  }, [detailsComplete, descriptionComplete, servicesComplete]);
 
-    const detailsComplete =
-        !errors.userName &&
-        !errors.businessName &&
-        !errors.userEmail &&
-        !errors.userPhone &&
-        userName.trim() !== '' &&
-        businessName.trim() !== '' &&
-        userEmail.trim() !== '' &&
-        userPhone.trim() !== '';
-    const descriptionComplete = !errors.prompt && prompt.trim() !== '';
-    const servicesComplete = !errors.services && services.trim() !== '';
+  const canGenerate = isFormValid && (!healthStatus.checked || healthStatus.ok);
 
-    useEffect(() => {
-        setUnlockedSections({
-            details: detailsComplete,
-            description: detailsComplete,
-            services: detailsComplete && descriptionComplete,
-            style: detailsComplete && descriptionComplete && servicesComplete,
-        });
-    }, [detailsComplete, descriptionComplete, servicesComplete]);
+  const onSubmit = useCallback(() => {
+    const result = validateAll();
+    if (result.success === false) return;
+    handleGenerate();
+  }, [validateAll, handleGenerate]);
 
-    const canGenerate = isFormValid;
+  return (
+    <div className="w-full max-w-4xl mx-auto p-4 md:p-8 animate-fade-in-up">
+      <div className="text-center mb-10">
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-800">{t('headline1')}</h2>
+        <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{t('subheadline')}</p>
+      </div>
 
-    const onSubmit = useCallback(() => {
-        const result = validateAll();
-        if (result.success === false) return;
-        handleGenerate();
-    }, [validateAll, handleGenerate]);
+      <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-gray-200">
+        <SectionCard
+          title={t('formStep1Title')}
+          subtitle={t('step1Subtitle')}
+          completed={detailsComplete}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ValidatedField
+              label={t('yourNamePlaceholder')}
+              error={errors.userName}
+              isValid={isFieldValid('userName')}
+              showSuccess
+            >
+              {(fieldProps) => (
+                <input
+                  {...fieldProps}
+                  type="text"
+                  value={userName}
+                  onChange={(e) => {
+                    setField('userName', e.target.value);
+                    markTouched('userName');
+                  }}
+                  onBlur={() => markTouched('userName')}
+                  placeholder={t('yourNamePlaceholder')}
+                />
+              )}
+            </ValidatedField>
+            <ValidatedField
+              label={t('businessNamePlaceholder')}
+              error={errors.businessName}
+              isValid={isFieldValid('businessName')}
+              showSuccess
+            >
+              {(fieldProps) => (
+                <input
+                  {...fieldProps}
+                  type="text"
+                  value={businessName}
+                  onChange={(e) => {
+                    setField('businessName', e.target.value);
+                    markTouched('businessName');
+                  }}
+                  onBlur={() => markTouched('businessName')}
+                  placeholder={t('businessNamePlaceholder')}
+                />
+              )}
+            </ValidatedField>
+            <ValidatedField
+              label={t('emailPlaceholder')}
+              error={errors.userEmail}
+              isValid={isFieldValid('userEmail')}
+              showSuccess
+            >
+              {(fieldProps) => (
+                <input
+                  {...fieldProps}
+                  type="email"
+                  value={userEmail}
+                  onChange={(e) => {
+                    setField('userEmail', e.target.value);
+                    markTouched('userEmail');
+                  }}
+                  onBlur={() => markTouched('userEmail')}
+                  placeholder={t('emailPlaceholder')}
+                  autoComplete="email"
+                />
+              )}
+            </ValidatedField>
+            <ValidatedField
+              label={t('phonePlaceholder')}
+              error={errors.userPhone}
+              isValid={isFieldValid('userPhone')}
+              showSuccess
+            >
+              {(fieldProps) => (
+                <input
+                  {...fieldProps}
+                  type="tel"
+                  value={userPhone}
+                  onChange={(e) => {
+                    setField('userPhone', e.target.value);
+                    markTouched('userPhone');
+                  }}
+                  onBlur={() => markTouched('userPhone')}
+                  placeholder={t('phonePlaceholder')}
+                  autoComplete="tel"
+                />
+              )}
+            </ValidatedField>
+          </div>
+        </SectionCard>
 
-    return (
-        <div className="w-full max-w-4xl mx-auto p-4 md:p-8 animate-fade-in-up">
-            <div className="text-center mb-10">
-                <h2 className="text-4xl md:text-5xl font-bold text-gray-800">{t('headline1')}</h2>
-                <p className="mt-4 text-lg text-gray-600 max-w-2xl mx-auto">{t('subheadline')}</p>
+        {unlockedSections.description && (
+          <SectionCard
+            title={t('step2Title')}
+            subtitle={t('step2Subtitle')}
+            completed={descriptionComplete}
+          >
+            <ValidatedField error={errors.prompt} isValid={isFieldValid('prompt')} showSuccess>
+              {(fieldProps) => (
+                <div className="relative">
+                  <textarea
+                    {...fieldProps}
+                    value={prompt}
+                    onChange={(e) => {
+                      setField('prompt', e.target.value);
+                      markTouched('prompt');
+                    }}
+                    onBlur={() => markTouched('prompt')}
+                    className={`${fieldProps.className} h-36 p-4 pr-16 text-lg resize-y`}
+                    placeholder={t('placeholder')}
+                  />
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${
+                      isListening
+                        ? 'bg-red-500 text-white animate-pulse'
+                        : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
+                    }`}
+                    aria-label={isListening ? t('stopListening') : t('startListening')}
+                  >
+                    <MicrophoneIcon className="w-6 h-6" />
+                  </button>
+                </div>
+              )}
+            </ValidatedField>
+            {speechError && <p className="text-red-500 mt-2">{speechError}</p>}
+          </SectionCard>
+        )}
+
+        {unlockedSections.services && (
+          <SectionCard
+            title="Services & Products"
+            subtitle="Describe what your business offers"
+            completed={servicesComplete}
+          >
+            <ValidatedField error={errors.services} isValid={isFieldValid('services')} showSuccess>
+              {(fieldProps) => (
+                <textarea
+                  {...fieldProps}
+                  value={services}
+                  onChange={(e) => {
+                    setField('services', e.target.value);
+                    markTouched('services');
+                  }}
+                  onBlur={() => markTouched('services')}
+                  className={`${fieldProps.className} h-32 p-4 text-lg resize-y`}
+                  placeholder="e.g., Web design, digital marketing, consulting, coffee and pastries..."
+                />
+              )}
+            </ValidatedField>
+          </SectionCard>
+        )}
+
+        {unlockedSections.style && (
+          <SectionCard
+            title="Location & Style"
+            subtitle="Set your location and choose a style"
+            completed={Boolean(location.trim() && themeColor && selectedPalette)}
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+              <ValidatedField
+                label="Business Location"
+                error={errors.location}
+                isValid={isFieldValid('location')}
+                showSuccess={Boolean(location.trim())}
+              >
+                {(fieldProps) => (
+                  <input
+                    {...fieldProps}
+                    type="text"
+                    value={location}
+                    onChange={(e) => {
+                      setField('location', e.target.value);
+                      markTouched('location');
+                    }}
+                    onBlur={() => markTouched('location')}
+                    placeholder="City, State or Country"
+                  />
+                )}
+              </ValidatedField>
+
+              <ValidatedField
+                label="Theme Color"
+                error={errors.themeColor}
+                isValid={isFieldValid('themeColor')}
+                showSuccess
+              >
+                {(fieldProps) => (
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={themeColor}
+                      onChange={(e) => {
+                        setField('themeColor', e.target.value);
+                        markTouched('themeColor');
+                      }}
+                      onBlur={() => markTouched('themeColor')}
+                      className="w-16 h-12 border border-gray-200 rounded cursor-pointer"
+                      aria-label="Theme color picker"
+                    />
+                    <input
+                      {...fieldProps}
+                      type="text"
+                      value={themeColor}
+                      onChange={(e) => {
+                        setField('themeColor', e.target.value);
+                        markTouched('themeColor');
+                      }}
+                      onBlur={() => markTouched('themeColor')}
+                      placeholder="#10b981"
+                      className={`${fieldProps.className} flex-1`}
+                    />
+                  </div>
+                )}
+              </ValidatedField>
             </div>
 
-            <div className="bg-white/70 backdrop-blur-sm rounded-xl shadow-lg p-6 md:p-8 border border-gray-200">
-                <SectionCard
-                    title={t('formStep1Title')}
-                    subtitle={t('step1Subtitle')}
-                    completed={detailsComplete}
-                >
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <ValidatedField
-                            label={t('yourNamePlaceholder')}
-                            error={errors.userName}
-                            isValid={isFieldValid('userName')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <input
-                                    {...fieldProps}
-                                    type="text"
-                                    value={userName}
-                                    onChange={(e) => {
-                                        setField('userName', e.target.value);
-                                        markTouched('userName');
-                                    }}
-                                    onBlur={() => markTouched('userName')}
-                                    placeholder={t('yourNamePlaceholder')}
-                                />
-                            )}
-                        </ValidatedField>
-                        <ValidatedField
-                            label={t('businessNamePlaceholder')}
-                            error={errors.businessName}
-                            isValid={isFieldValid('businessName')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <input
-                                    {...fieldProps}
-                                    type="text"
-                                    value={businessName}
-                                    onChange={(e) => {
-                                        setField('businessName', e.target.value);
-                                        markTouched('businessName');
-                                    }}
-                                    onBlur={() => markTouched('businessName')}
-                                    placeholder={t('businessNamePlaceholder')}
-                                />
-                            )}
-                        </ValidatedField>
-                        <ValidatedField
-                            label={t('emailPlaceholder')}
-                            error={errors.userEmail}
-                            isValid={isFieldValid('userEmail')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <input
-                                    {...fieldProps}
-                                    type="email"
-                                    value={userEmail}
-                                    onChange={(e) => {
-                                        setField('userEmail', e.target.value);
-                                        markTouched('userEmail');
-                                    }}
-                                    onBlur={() => markTouched('userEmail')}
-                                    placeholder={t('emailPlaceholder')}
-                                    autoComplete="email"
-                                />
-                            )}
-                        </ValidatedField>
-                        <ValidatedField
-                            label={t('phonePlaceholder')}
-                            error={errors.userPhone}
-                            isValid={isFieldValid('userPhone')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <input
-                                    {...fieldProps}
-                                    type="tel"
-                                    value={userPhone}
-                                    onChange={(e) => {
-                                        setField('userPhone', e.target.value);
-                                        markTouched('userPhone');
-                                    }}
-                                    onBlur={() => markTouched('userPhone')}
-                                    placeholder={t('phonePlaceholder')}
-                                    autoComplete="tel"
-                                />
-                            )}
-                        </ValidatedField>
-                    </div>
-                </SectionCard>
-
-                {unlockedSections.description && (
-                    <SectionCard
-                        title={t('step2Title')}
-                        subtitle={t('step2Subtitle')}
-                        completed={descriptionComplete}
-                    >
-                        <ValidatedField
-                            error={errors.prompt}
-                            isValid={isFieldValid('prompt')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <div className="relative">
-                                    <textarea
-                                        {...fieldProps}
-                                        value={prompt}
-                                        onChange={(e) => {
-                                            setField('prompt', e.target.value);
-                                            markTouched('prompt');
-                                        }}
-                                        onBlur={() => markTouched('prompt')}
-                                        className={`${fieldProps.className} h-36 p-4 pr-16 text-lg resize-y`}
-                                        placeholder={t('placeholder')}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={toggleListening}
-                                        className={`absolute top-4 right-4 p-2 rounded-full transition-colors ${
-                                            isListening
-                                                ? 'bg-red-500 text-white animate-pulse'
-                                                : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
-                                        }`}
-                                        aria-label={isListening ? t('stopListening') : t('startListening')}
-                                    >
-                                        <MicrophoneIcon className="w-6 h-6" />
-                                    </button>
-                                </div>
-                            )}
-                        </ValidatedField>
-                        {speechError && <p className="text-red-500 mt-2">{speechError}</p>}
-                    </SectionCard>
-                )}
-
-                {unlockedSections.services && (
-                    <SectionCard
-                        title="Services & Products"
-                        subtitle="Describe what your business offers"
-                        completed={servicesComplete}
-                    >
-                        <ValidatedField
-                            error={errors.services}
-                            isValid={isFieldValid('services')}
-                            showSuccess
-                        >
-                            {(fieldProps) => (
-                                <textarea
-                                    {...fieldProps}
-                                    value={services}
-                                    onChange={(e) => {
-                                        setField('services', e.target.value);
-                                        markTouched('services');
-                                    }}
-                                    onBlur={() => markTouched('services')}
-                                    className={`${fieldProps.className} h-32 p-4 text-lg resize-y`}
-                                    placeholder="e.g., Web design, digital marketing, consulting, coffee and pastries..."
-                                />
-                            )}
-                        </ValidatedField>
-                    </SectionCard>
-                )}
-
-                {unlockedSections.style && (
-                    <SectionCard
-                        title="Location & Style"
-                        subtitle="Set your location and choose a style"
-                        completed={Boolean(location.trim() && themeColor && selectedPalette)}
-                    >
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                            <ValidatedField
-                                label="Business Location"
-                                error={errors.location}
-                                isValid={isFieldValid('location')}
-                                showSuccess={Boolean(location.trim())}
-                            >
-                                {(fieldProps) => (
-                                    <input
-                                        {...fieldProps}
-                                        type="text"
-                                        value={location}
-                                        onChange={(e) => {
-                                            setField('location', e.target.value);
-                                            markTouched('location');
-                                        }}
-                                        onBlur={() => markTouched('location')}
-                                        placeholder="City, State or Country"
-                                    />
-                                )}
-                            </ValidatedField>
-
-                            <ValidatedField
-                                label="Theme Color"
-                                error={errors.themeColor}
-                                isValid={isFieldValid('themeColor')}
-                                showSuccess
-                            >
-                                {(fieldProps) => (
-                                    <div className="flex items-center gap-3">
-                                        <input
-                                            type="color"
-                                            value={themeColor}
-                                            onChange={(e) => {
-                                                setField('themeColor', e.target.value);
-                                                markTouched('themeColor');
-                                            }}
-                                            onBlur={() => markTouched('themeColor')}
-                                            className="w-16 h-12 border border-gray-200 rounded cursor-pointer"
-                                            aria-label="Theme color picker"
-                                        />
-                                        <input
-                                            {...fieldProps}
-                                            type="text"
-                                            value={themeColor}
-                                            onChange={(e) => {
-                                                setField('themeColor', e.target.value);
-                                                markTouched('themeColor');
-                                            }}
-                                            onBlur={() => markTouched('themeColor')}
-                                            placeholder="#10b981"
-                                            className={`${fieldProps.className} flex-1`}
-                                        />
-                                    </div>
-                                )}
-                            </ValidatedField>
-                        </div>
-
-                        <div className="mb-6">
-                            <label className="block text-sm font-medium text-gray-700 mb-3">Color Palette</label>
-                            <PaletteSelector
-                                selectedPalette={selectedPalette}
-                                onSelectPalette={(palette) => {
-                                    setField('selectedPalette', palette);
-                                    markTouched('selectedPalette');
-                                }}
-                                error={errors.selectedPalette}
-                                getLabel={t}
-                            />
-                        </div>
-
-                        {error && <p className="text-red-500 mt-6 text-center font-medium" role="alert">{error}</p>}
-
-                        <div className="mt-8 pt-6 border-t border-gray-200 text-center">
-                            <button
-                                type="button"
-                                onClick={onSubmit}
-                                disabled={!canGenerate}
-                                className="bg-lime-500 text-white font-bold py-4 px-16 text-lg rounded-lg hover:bg-lime-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto"
-                            >
-                                <SparklesIcon className="w-6 h-6" /> {t('generateButton')}
-                            </button>
-                        </div>
-                    </SectionCard>
-                )}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-3">Color Palette</label>
+              <PaletteSelector
+                selectedPalette={selectedPalette}
+                onSelectPalette={(palette) => {
+                  setField('selectedPalette', palette);
+                  markTouched('selectedPalette');
+                }}
+                error={errors.selectedPalette}
+                getLabel={t}
+              />
             </div>
-        </div>
-    );
+
+            {error && (
+              <p className="text-red-500 mt-6 text-center font-medium" role="alert">
+                {error}
+              </p>
+            )}
+            {healthStatus.checked && !healthStatus.ok && (
+              <p className="text-red-500 mt-2 text-center font-medium" role="alert">
+                {healthStatus.message}
+              </p>
+            )}
+
+            <div className="mt-8 pt-6 border-t border-gray-200 text-center">
+              <button
+                type="button"
+                onClick={onSubmit}
+                disabled={!canGenerate}
+                className="bg-lime-500 text-white font-bold py-4 px-16 text-lg rounded-lg hover:bg-lime-600 transition disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-3 mx-auto"
+              >
+                <SparklesIcon className="w-6 h-6" /> {t('generateButton')}
+              </button>
+            </div>
+          </SectionCard>
+        )}
+      </div>
+    </div>
+  );
 };

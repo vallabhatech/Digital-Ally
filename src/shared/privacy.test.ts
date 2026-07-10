@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { loadPrivacyPreference, savePrivacyPreference, clearPrivacyPreference, CONSENT_VERSION } from './privacy';
+import {
+  loadPrivacyPreference,
+  savePrivacyPreference,
+  clearPrivacyPreference,
+  CONSENT_VERSION,
+} from './privacy';
 
 describe('privacy utilities', () => {
   beforeEach(() => {

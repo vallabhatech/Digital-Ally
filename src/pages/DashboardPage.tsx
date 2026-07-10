@@ -1,16 +1,39 @@
 import React, { useState } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import {
+  selectBusinessName,
+  selectError,
+  selectGeneratedCode,
+  selectLanguage,
+  selectSetField,
+  selectTranslator,
+  selectUserEmail,
+  selectUserName,
+  selectUserPhone,
+} from '@/store/selectors';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
-import { analyzeAndTranslateDashboard } from '@/services/geminiService';
+import { analyzeAndTranslateDashboard } from '@/features/generation/geminiService';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { LazyImage } from '@/components/LazyImage';
-import { 
-    UserGroupIcon, CalendarDaysIcon, ChatBubbleOvalLeftEllipsisIcon,
-    DocumentChartBarIcon, BuildingStorefrontIcon, SparklesIcon, ArrowRightIcon,
-    PlusCircleIcon, StopCircleIcon, SpeakerWaveIcon, CodeIcon
+import {
+  UserGroupIcon,
+  CalendarDaysIcon,
+  ChatBubbleOvalLeftEllipsisIcon,
+  DocumentChartBarIcon,
+  BuildingStorefrontIcon,
+  SparklesIcon,
+  ArrowRightIcon,
+  PlusCircleIcon,
+  StopCircleIcon,
+  SpeakerWaveIcon,
+  CodeIcon,
 } from '@/components/IconSet';
 
-const DashboardCard: React.FC<{ title: string, icon: React.ReactNode, children: React.ReactNode }> = ({ title, icon, children }) => (
+const DashboardCard: React.FC<{
+  title: string;
+  icon: React.ReactNode;
+  children: React.ReactNode;
+}> = ({ title, icon, children }) => (
   <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-200 flex flex-col hover:shadow-lime-100 hover:-translate-y-1 transition-all duration-300">
     <div className="flex items-center gap-4 mb-4">
       <div className="bg-lime-100 text-lime-700 rounded-full p-3">{icon}</div>
@@ -21,19 +44,19 @@ const DashboardCard: React.FC<{ title: string, icon: React.ReactNode, children: 
 );
 
 export const DashboardPage: React.FC = () => {
-  // 1. Zustand Store Selectors
-  const t = useAppStore((state) => state.t);
-  const businessName = useAppStore((state) => state.businessName);
-  const userName = useAppStore((state) => state.userName);
-  const userEmail = useAppStore((state) => state.userEmail);
-  const userPhone = useAppStore((state) => state.userPhone);
-  const language = useAppStore((state) => state.language);
-  const error = useAppStore((state) => state.error);
-  const generatedCode = useAppStore((state) => state.generatedCode);
-  const setField = useAppStore((state) => state.setField);
+  const t = useAppStore(selectTranslator);
+  const businessName = useAppStore(selectBusinessName);
+  const userName = useAppStore(selectUserName);
+  const userEmail = useAppStore(selectUserEmail);
+  const userPhone = useAppStore(selectUserPhone);
+  const language = useAppStore(selectLanguage);
+  const error = useAppStore(selectError);
+  const generatedCode = useAppStore(selectGeneratedCode);
+  const setField = useAppStore(selectSetField);
 
   // Helper mapping to bridge old state triggers smoothly
-  const setPageState = (val: "form" | "loading" | "result" | "dashboard") => setField('pageState', val);
+  const setPageState = (val: 'form' | 'loading' | 'result' | 'dashboard') =>
+    setField('pageState', val);
   const setError = (val: string | null) => setField('error', val);
 
   // 2. Local State variables & Custom hooks
@@ -43,8 +66,8 @@ export const DashboardPage: React.FC = () => {
 
   const handleAnalyze = async () => {
     if (isSpeaking) {
-        cancel();
-        return;
+      cancel();
+      return;
     }
     if (!businessName || isAnalyzing) return;
 
@@ -53,109 +76,147 @@ export const DashboardPage: React.FC = () => {
     setError(null);
 
     try {
-        const mockDashboardData = `
+      const mockDashboardData = `
         Business: ${businessName}
         Website Status: ${generatedCode ? 'Generated' : 'Not Generated'}
         Recent Activity: Website generation completed
         `;
-        
-        const analysis = await analyzeAndTranslateDashboard({
-            dashboardData: mockDashboardData,
-            language
-        });
-        
-        setAnalysisResult(analysis);
-        
-        if (analysis) {
-            speak(analysis, language);
-        }
+
+      const analysis = await analyzeAndTranslateDashboard({
+        dashboardData: mockDashboardData,
+        language,
+      });
+
+      setAnalysisResult(analysis);
+
+      if (analysis) {
+        speak(analysis, language);
+      }
     } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        setError(`Failed to analyze dashboard: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      setError(`Failed to analyze dashboard: ${errorMessage}`);
     } finally {
-        setIsAnalyzing(false);
+      setIsAnalyzing(false);
     }
   };
 
   return (
     <div className="w-full max-w-7xl mx-auto p-4 md:p-8">
-        <div className="text-center mb-10">
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-800">{t('dashboard')}</h2>
-            <p className="mt-4 text-lg text-gray-600">{t('dashboardSubtext')}</p>
-        </div>
+      <div className="text-center mb-10">
+        <h2 className="text-4xl md:text-5xl font-bold text-gray-800">{t('dashboard')}</h2>
+        <p className="mt-4 text-lg text-gray-600">{t('dashboardSubtext')}</p>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {generatedCode && (
           <DashboardCard title={t('websiteManagement')} icon={<CodeIcon className="w-7 h-7" />}>
             <p className="text-sm mb-4 flex-grow">{t('websiteManagementSubtext')}</p>
             <div className="space-y-2">
               <button className="w-full flex items-center justify-center gap-2 bg-lime-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-lime-700 transition">
-                <ArrowRightIcon className="w-5 h-5"/>
+                <ArrowRightIcon className="w-5 h-5" />
                 {t('viewWebsite')}
               </button>
             </div>
             <button
-                onClick={() => setPageState('result')}
-                className="mt-auto pt-3 w-full flex items-center justify-center gap-2 bg-lime-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-lime-700 transition"
+              onClick={() => setPageState('result')}
+              className="mt-auto pt-3 w-full flex items-center justify-center gap-2 bg-lime-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-lime-700 transition"
             >
-                <CodeIcon className="w-5 h-5"/>
-                {t('customizeWebsite')}
+              <CodeIcon className="w-5 h-5" />
+              {t('customizeWebsite')}
             </button>
           </DashboardCard>
         )}
-        <DashboardCard title={t('businessProfile')} icon={<BuildingStorefrontIcon className="w-7 h-7" />}>
+        <DashboardCard
+          title={t('businessProfile')}
+          icon={<BuildingStorefrontIcon className="w-7 h-7" />}
+        >
           <LazyImage
             src="/images/placeholder.svg"
             alt={`${businessName || 'Business'} storefront`}
             className="w-full h-32 rounded-lg mb-4 object-cover"
             wrapperClassName="w-full"
           />
-          <p><strong>{t('businessNamePlaceholder')}:</strong> {businessName}</p>
-          <p><strong>{t('yourNamePlaceholder')}:</strong> {userName}</p>
-          <p><strong>{t('emailPlaceholder')}:</strong> {userEmail}</p>
-          <p><strong>{t('phonePlaceholder')}:</strong> {userPhone}</p>
+          <p>
+            <strong>{t('businessNamePlaceholder')}:</strong> {businessName}
+          </p>
+          <p>
+            <strong>{t('yourNamePlaceholder')}:</strong> {userName}
+          </p>
+          <p>
+            <strong>{t('emailPlaceholder')}:</strong> {userEmail}
+          </p>
+          <p>
+            <strong>{t('phonePlaceholder')}:</strong> {userPhone}
+          </p>
         </DashboardCard>
         <DashboardCard title={t('aiAnalysis')} icon={<SparklesIcon className="w-7 h-7" />}>
           <p className="text-sm mb-4 flex-grow">{t('aiAnalysisSubtext')}</p>
-          <button 
-              onClick={handleAnalyze} 
-              disabled={isAnalyzing || !businessName}
-              className="w-full flex items-center justify-center gap-2 bg-lime-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-lime-700 transition disabled:bg-gray-400"
+          <button
+            onClick={handleAnalyze}
+            disabled={isAnalyzing || !businessName}
+            className="w-full flex items-center justify-center gap-2 bg-lime-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-lime-700 transition disabled:bg-gray-400"
           >
-              {isAnalyzing 
-                  ? <LoadingSpinner className="w-5 h-5" />
-                  : (isSpeaking ? <StopCircleIcon className="w-5 h-5"/> : <SpeakerWaveIcon className="w-5 h-5"/>)
-              }
-              {isAnalyzing ? t('analyzing') : (isSpeaking ? t('stopSpeaking') : t('analyzeAndSpeak'))}
+            {isAnalyzing ? (
+              <LoadingSpinner className="w-5 h-5" />
+            ) : isSpeaking ? (
+              <StopCircleIcon className="w-5 h-5" />
+            ) : (
+              <SpeakerWaveIcon className="w-5 h-5" />
+            )}
+            {isAnalyzing ? t('analyzing') : isSpeaking ? t('stopSpeaking') : t('analyzeAndSpeak')}
           </button>
-          {error && !isAnalyzing && <p className="text-red-500 mt-2 text-xs text-center">{error}</p>}
-           {analysisResult && !isAnalyzing && (
-              <div className="mt-4 p-3 bg-lime-50 border border-lime-200 rounded-lg text-sm text-lime-900">
-                  {analysisResult}
-              </div>
+          {error && !isAnalyzing && (
+            <p className="text-red-500 mt-2 text-xs text-center">{error}</p>
+          )}
+          {analysisResult && !isAnalyzing && (
+            <div className="mt-4 p-3 bg-lime-50 border border-lime-200 rounded-lg text-sm text-lime-900">
+              {analysisResult}
+            </div>
           )}
         </DashboardCard>
         <DashboardCard title={t('todaysVisitors')} icon={<UserGroupIcon className="w-7 h-7" />}>
-           <p className="text-4xl font-bold text-gray-900">1,234</p>
-           <p><strong>{t('peakTime')}:</strong> 2:15 PM</p>
-           <p><strong>{t('mostViewed')}:</strong> {t('servicesPage')}</p>
+          <p className="text-4xl font-bold text-gray-900">1,234</p>
+          <p>
+            <strong>{t('peakTime')}:</strong> 2:15 PM
+          </p>
+          <p>
+            <strong>{t('mostViewed')}:</strong> {t('servicesPage')}
+          </p>
         </DashboardCard>
-        <DashboardCard title={t('campaignLaunches')} icon={<CalendarDaysIcon className="w-7 h-7" />}>
-            <p><strong>{t('upcoming')}:</strong> {t('summerSale')}</p>
-            <p><strong>{t('past')}:</strong> {t('springLaunch')}</p>
-            <button className="text-lime-600 font-semibold flex items-center gap-1 mt-2 hover:underline"><PlusCircleIcon className="w-5 h-5"/> {t('newCampaign')}</button>
+        <DashboardCard
+          title={t('campaignLaunches')}
+          icon={<CalendarDaysIcon className="w-7 h-7" />}
+        >
+          <p>
+            <strong>{t('upcoming')}:</strong> {t('summerSale')}
+          </p>
+          <p>
+            <strong>{t('past')}:</strong> {t('springLaunch')}
+          </p>
+          <button className="text-lime-600 font-semibold flex items-center gap-1 mt-2 hover:underline">
+            <PlusCircleIcon className="w-5 h-5" /> {t('newCampaign')}
+          </button>
         </DashboardCard>
-        <DashboardCard title={t('mostViewedPages')} icon={<DocumentChartBarIcon className="w-7 h-7" />}>
-            <ol className="list-decimal list-inside space-y-1">
-                <li>{t('homePage')}</li>
-                <li>{t('servicesPage')}</li>
-                <li>{t('aboutPage')}</li>
-            </ol>
+        <DashboardCard
+          title={t('mostViewedPages')}
+          icon={<DocumentChartBarIcon className="w-7 h-7" />}
+        >
+          <ol className="list-decimal list-inside space-y-1">
+            <li>{t('homePage')}</li>
+            <li>{t('servicesPage')}</li>
+            <li>{t('aboutPage')}</li>
+          </ol>
         </DashboardCard>
-        <DashboardCard title={t('latestReviews')} icon={<ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7" />}>
-             <p>"Great service! Very happy." - ⭐⭐⭐⭐⭐</p>
-             <p>"The product was okay." - ⭐⭐⭐☆☆</p>
-             <p><strong>{t('sentiment')}:</strong> <span className="text-green-600 font-semibold">{t('positive')}</span></p>
+        <DashboardCard
+          title={t('latestReviews')}
+          icon={<ChatBubbleOvalLeftEllipsisIcon className="w-7 h-7" />}
+        >
+          <p>"Great service! Very happy." - ⭐⭐⭐⭐⭐</p>
+          <p>"The product was okay." - ⭐⭐⭐☆☆</p>
+          <p>
+            <strong>{t('sentiment')}:</strong>{' '}
+            <span className="text-green-600 font-semibold">{t('positive')}</span>
+          </p>
         </DashboardCard>
       </div>
     </div>

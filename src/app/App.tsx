@@ -1,5 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAppStore } from '@/store/useAppStore';
+import {
+  selectCheckHealth,
+  selectPageState,
+  selectPrivacyMode,
+  selectSetPrivacyMode,
+} from '@/store/selectors';
 import { Header } from '@/components/Header';
 import { HomePage } from '@/pages/HomePage';
 import { ResultPage } from '@/pages/ResultPage';
@@ -8,10 +14,14 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrivacyModal } from '@/components/PrivacyModal';
 
 const App: React.FC = () => {
-  // Pull values and setters directly from the Zustand store
-  const pageState = useAppStore((state) => state.pageState);
-  const privacyMode = useAppStore((state) => state.privacyMode);
-  const setPrivacyMode = useAppStore((state) => state.setPrivacyMode);
+  const pageState = useAppStore(selectPageState);
+  const privacyMode = useAppStore(selectPrivacyMode);
+  const setPrivacyMode = useAppStore(selectSetPrivacyMode);
+  const checkHealth = useAppStore(selectCheckHealth);
+
+  useEffect(() => {
+    void checkHealth();
+  }, [checkHealth]);
 
   return (
     <div className="min-h-screen flex flex-col">

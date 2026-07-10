@@ -12,13 +12,17 @@ interface GenerationOptions {
 
 export function useGeneration({ t }: UseGenerationProps) {
   const generateWebsiteContent = useCallback(
-    async (formState: Record<string, any>, modificationPrompt?: string, options?: GenerationOptions) => {
+    async (
+      formState: Record<string, any>,
+      modificationPrompt?: string,
+      options?: GenerationOptions
+    ) => {
       try {
         const sanitized = sanitizeFormData(formState);
         const validation = validateSchema(websiteFormSchema, sanitized, t) as any;
 
         if (validation.success === false) {
-          return { error: validation.firstError };
+          return { success: false, error: validation.firstError };
         }
 
         const result = await generateWebsite({
@@ -30,10 +34,10 @@ export function useGeneration({ t }: UseGenerationProps) {
         return result;
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-        return { error: errorMessage };
+        return { success: false, error: errorMessage };
       }
-    }
-    ,[t]
+    },
+    [t]
   );
 
   const generateNewsletterContent = useCallback(

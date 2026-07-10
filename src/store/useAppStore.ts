@@ -1,82 +1,125 @@
-import { create } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
-import { useGeneration } from "@/hooks/useGeneration";
-import { LANGUAGES, TRANSLATIONS } from "@/shared/constants";
-import { AiProcessingMode, clearPrivacyPreference, loadPrivacyPreference, savePrivacyPreference } from "@/shared/privacy";
+import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import {
+  checkGeminiHealth,
+  generateNewsletter,
+  generateWebsite,
+} from '@/features/generation/geminiService';
+import { LANGUAGES, TRANSLATIONS } from '@/shared/constants';
+import {
+  clearPrivacyPreference,
+  loadPrivacyPreference,
+  savePrivacyPreference,
+} from '@/shared/privacy';
+import type {
+  AppStore,
+  AppStoreData,
+  GenerationState,
+  HealthStatus,
+  StoreFieldKey,
+  StoreFieldValueMap,
+} from '@/shared/types';
 import {
   modificationSchema,
   newsletterFormSchema,
   sanitizeFormData,
   validateSchema,
-} from "@/shared/validation";
+  websiteFormSchema,
+} from '@/shared/validation';
 
-interface AppState {
-  privacyMode: AiProcessingMode | null;
-  userName: string;
-  businessName: string;
-  userEmail: string;
-  userPhone: string;
-  prompt: string;
-  modificationPrompt: string;
-  selectedPalette: string;
-  generatedCode: string;
-  generatedUrl: string;
-  newsletter: string;
-  isGeneratingPost: boolean;
-  pageState: "form" | "loading" | "result" | "dashboard";
-  language: string;
-  error: string | null;
-  services: string;
-  location: string;
-  themeColor: string;
-  lastPrompt: string;
-  retryCount: number;
-  healthStatus: string;
+const initialHealthStatus: HealthStatus = {
+  ok: true,
+  checked: false,
+  retrying: false,
+  message: '',
+};
 
-  setField: <K extends keyof AppState>(key: K, value: AppState[K]) => void;
-  setPrivacyMode: (mode: AiProcessingMode) => void;
-  clearPrivateData: () => void;
-  reviewPrivacyChoice: () => void;
-  handleSelectExample: (examplePrompt: string) => void;
-  reset: () => void;
-  
-  t: (key: string, params?: Record<string, string | number>) => string;
-  handleGenerate: () => Promise<void>;
-  handleAssist: () => Promise<void>;
-  handleGenerateNewsletter: () => Promise<void>;
-  handleRetry: () => Promise<void>;
-}
+const initialGenerationState: GenerationState = {
+  generatedCode: '',
+  generatedUrl: '',
+  newsletter: '',
+  isGeneratingPost: false,
+};
 
-export const useAppStore = create<AppState>()(
+const createInitialData = (): AppStoreData => ({
+  privacyMode: typeof window !== 'undefined' ? loadPrivacyPreference()?.mode || null : null,
+  user: {
+    name: '',
+    email: '',
+    phone: '',
+  },
+  business: {
+    name: '',
+    services: '',
+    location: '',
+  },
+  draft: {
+    prompt: '',
+    modificationPrompt: '',
+    selectedPalette: '',
+    themeColor: '#10b981',
+  },
+  generation: { ...initialGenerationState },
+  ui: {
+    pageState: 'form',
+    language: LANGUAGES[0]?.value || 'en-US',
+    error: null,
+    lastPrompt: '',
+    retryCount: 0,
+    healthStatus: { ...initialHealthStatus },
+  },
+});
+
+const mapFieldUpdate = <K extends StoreFieldKey>(
+  state: AppStore,
+  key: K,
+  value: StoreFieldValueMap[K]
+): Partial<AppStoreData> => {
+  switch (key) {
+    case 'userName':
+      return { user: { ...state.user, name: value as string } };
+    case 'businessName':
+      return { business: { ...state.business, name: value as string } };
+    case 'userEmail':
+      return { user: { ...state.user, email: value as string } };
+    case 'userPhone':
+      return { user: { ...state.user, phone: value as string } };
+    case 'prompt':
+      return { draft: { ...state.draft, prompt: value as string } };
+    case 'modificationPrompt':
+      return { draft: { ...state.draft, modificationPrompt: value as string } };
+    case 'selectedPalette':
+      return { draft: { ...state.draft, selectedPalette: value as string } };
+    case 'services':
+      return { business: { ...state.business, services: value as string } };
+    case 'location':
+      return { business: { ...state.business, location: value as string } };
+    case 'themeColor':
+      return { draft: { ...state.draft, themeColor: value as string } };
+    case 'language':
+      return { ui: { ...state.ui, language: value as string } };
+    case 'pageState':
+      return { ui: { ...state.ui, pageState: value as AppStoreData['ui']['pageState'] } };
+    case 'error':
+      return { ui: { ...state.ui, error: value as string | null } };
+    default:
+      return {};
+  }
+};
+
+export const useAppStore = create<AppStore>()(
   persist(
     (set, get) => ({
-      privacyMode: typeof window !== "undefined" ? loadPrivacyPreference()?.mode || null : null,
-      userName: "",
-      businessName: "",
-      userEmail: "",
-      userPhone: "",
-      prompt: "",
-      modificationPrompt: "",
-      selectedPalette: "",
-      generatedCode: "",
-      generatedUrl: "",
-      newsletter: "",
-      isGeneratingPost: false,
-      pageState: "form",
-      language: LANGUAGES[0]?.value || "en-US",
-      error: null,
-      services: "",
-      location: "",
-      themeColor: "#10b981",
-      lastPrompt: "",
-      retryCount: 0,
-      healthStatus: "",
+      ...createInitialData(),
 
-      setField: (key, value) => set({ [key]: value }),
+      setField: (key, value) =>
+        set((state) => ({
+          ...mapFieldUpdate(state, key, value),
+        })),
 
       t: (key, params) => {
-        const { language } = get();
-        let message = TRANSLATIONS[language]?.[key] || TRANSLATIONS["en-US"]?.[key] || key;
+        const { ui } = get();
+        let message = TRANSLATIONS[ui.language]?.[key] || TRANSLATIONS['en-US']?.[key] || key;
         if (params) {
           for (const [paramKey, paramValue] of Object.entries(params)) {
             message = message.replace(`{${paramKey}}`, String(paramValue));
@@ -87,48 +130,107 @@ export const useAppStore = create<AppState>()(
 
       setPrivacyMode: (mode) => {
         savePrivacyPreference(mode);
-        set({ privacyMode: mode, error: null });
+        set((state) => ({ privacyMode: mode, ui: { ...state.ui, error: null } }));
       },
 
       handleSelectExample: (examplePrompt) => {
-        set({ prompt: examplePrompt, pageState: "form" });
+        set((state) => ({
+          draft: { ...state.draft, prompt: examplePrompt },
+          ui: { ...state.ui, pageState: 'form' },
+        }));
+      },
+
+      checkHealth: async () => {
+        set((state) => ({
+          ui: {
+            ...state.ui,
+            healthStatus: {
+              ...state.ui.healthStatus,
+              retrying: true,
+            },
+          },
+        }));
+
+        try {
+          const result = await checkGeminiHealth();
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              healthStatus: result,
+            },
+          }));
+        } catch (err) {
+          const message = err instanceof Error ? err.message : 'Unable to verify backend health.';
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              healthStatus: {
+                ok: false,
+                checked: true,
+                retrying: false,
+                message,
+              },
+            },
+          }));
+        }
       },
 
       handleGenerate: async () => {
         const s = get();
         const formData = sanitizeFormData({
-          userName: s.userName,
-          businessName: s.businessName,
-          userEmail: s.userEmail,
-          userPhone: s.userPhone,
-          prompt: s.prompt,
-          services: s.services,
-          location: s.location,
-          themeColor: s.themeColor,
-          selectedPalette: s.selectedPalette,
+          userName: s.user.name,
+          businessName: s.business.name,
+          userEmail: s.user.email,
+          userPhone: s.user.phone,
+          prompt: s.draft.prompt,
+          services: s.business.services,
+          location: s.business.location,
+          themeColor: s.draft.themeColor,
+          selectedPalette: s.draft.selectedPalette,
         });
 
-        set({ lastPrompt: s.prompt, pageState: "loading", error: null, generatedUrl: "", newsletter: "" });
+        const validation = validateSchema(websiteFormSchema, formData, s.t);
+        if (validation.success === false) {
+          set((state) => ({ ui: { ...state.ui, error: validation.firstError } }));
+          return;
+        }
 
-        const { generateWebsiteContent } = useGeneration({ t: s.t });
-        const result = await generateWebsiteContent(formData, undefined, {
+        set((state) => ({
+          ui: { ...state.ui, lastPrompt: s.draft.prompt, pageState: 'loading', error: null },
+          generation: { ...state.generation, generatedUrl: '', newsletter: '' },
+        }));
+
+        const result = await generateWebsite({
+          formData: validation.data,
           onRetry: (attempt, err) => {
-            set({ retryCount: attempt, error: err.message });
+            set((state) => ({
+              ui: { ...state.ui, retryCount: attempt, error: err.message },
+            }));
           },
         });
 
-        if (result && "error" in result) {
-          set({ error: `Failed to generate website: ${result.error}`, pageState: "result" });
-          set((prev) => ({ retryCount: prev.retryCount + 1 }));
-        } else if (result && result.code?.trim().toLowerCase().startsWith("<!doctype html")) {
-          set({
-            generatedCode: result.code,
-            pageState: "result",
-            generatedUrl: `data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`,
-            retryCount: 0,
-          });
+        if (result.success === false) {
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              error: `Failed to generate website: ${result.error}`,
+              pageState: 'result',
+              retryCount: state.ui.retryCount + 1,
+            },
+          }));
+        } else if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
+          set((state) => ({
+            generation: {
+              ...state.generation,
+              generatedCode: result.code,
+              generatedUrl: `data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`,
+            },
+            ui: { ...state.ui, pageState: 'result', retryCount: 0 },
+          }));
         } else {
-          set({ error: s.t("updateFailed"), pageState: "result" });
+          set((state) => ({
+            ui: { ...state.ui, error: s.t('updateFailed'), pageState: 'result' },
+          }));
         }
       },
 
@@ -136,48 +238,73 @@ export const useAppStore = create<AppState>()(
         const s = get();
         const validation = validateSchema(
           modificationSchema,
-          sanitizeFormData({ modificationPrompt: s.modificationPrompt }),
+          sanitizeFormData({ modificationPrompt: s.draft.modificationPrompt }),
           s.t
-        ) as any;
+        );
 
         if (validation.success === false) {
-          set({ error: validation.firstError });
+          set((state) => ({ ui: { ...state.ui, error: validation.firstError } }));
           return;
         }
 
-        set({ lastPrompt: s.prompt, pageState: "loading", error: null, generatedUrl: "", newsletter: "" });
-        const { generateWebsiteContent } = useGeneration({ t: s.t });
-        
+        set((state) => ({
+          ui: { ...state.ui, lastPrompt: s.draft.prompt, pageState: 'loading', error: null },
+          generation: { ...state.generation, generatedUrl: '', newsletter: '' },
+        }));
+
         const formData = sanitizeFormData({
-          userName: s.userName,
-          businessName: s.businessName,
-          userEmail: s.userEmail,
-          userPhone: s.userPhone,
-          prompt: s.prompt,
-          services: s.services,
-          location: s.location,
-          themeColor: s.themeColor,
-          selectedPalette: s.selectedPalette,
+          userName: s.user.name,
+          businessName: s.business.name,
+          userEmail: s.user.email,
+          userPhone: s.user.phone,
+          prompt: s.draft.prompt,
+          services: s.business.services,
+          location: s.business.location,
+          themeColor: s.draft.themeColor,
+          selectedPalette: s.draft.selectedPalette,
         });
 
-        const result = await generateWebsiteContent(formData, validation.data.modificationPrompt, {
+        const websiteValidation = validateSchema(websiteFormSchema, formData, s.t);
+        if (websiteValidation.success === false) {
+          set((state) => ({
+            ui: { ...state.ui, error: websiteValidation.firstError, pageState: 'result' },
+          }));
+          return;
+        }
+
+        const result = await generateWebsite({
+          formData: websiteValidation.data,
+          modificationPrompt: validation.data.modificationPrompt,
           onRetry: (attempt, err) => {
-            set({ retryCount: attempt, error: err.message });
+            set((state) => ({
+              ui: { ...state.ui, retryCount: attempt, error: err.message },
+            }));
           },
         });
 
-        if (result && "error" in result) {
-          set({ error: `Failed to generate website: ${result.error}`, pageState: "result" });
-        } else if (result && result.code?.trim().toLowerCase().startsWith("<!doctype html")) {
-          set({
-            generatedCode: result.code,
-            pageState: "result",
-            generatedUrl: `data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`,
-            modificationPrompt: "",
-            retryCount: 0,
-          });
+        if (result.success === false) {
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              error: `Failed to generate website: ${result.error}`,
+              pageState: 'result',
+            },
+          }));
+        } else if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
+          set((state) => ({
+            generation: {
+              ...state.generation,
+              generatedCode: result.code,
+              generatedUrl: `data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`,
+            },
+            draft: { ...state.draft, modificationPrompt: '' },
+            ui: { ...state.ui, pageState: 'result', retryCount: 0 },
+          }));
         } else {
-          set({ error: s.t("updateFailed"), pageState: "result", modificationPrompt: "" });
+          set((state) => ({
+            ui: { ...state.ui, error: s.t('updateFailed'), pageState: 'result' },
+            draft: { ...state.draft, modificationPrompt: '' },
+          }));
         }
       },
 
@@ -185,62 +312,87 @@ export const useAppStore = create<AppState>()(
         const s = get();
         const validation = validateSchema(
           newsletterFormSchema,
-          sanitizeFormData({ prompt: s.prompt, businessName: s.businessName, generatedUrl: s.generatedUrl }),
+          sanitizeFormData({
+            prompt: s.draft.prompt,
+            businessName: s.business.name,
+            generatedUrl: s.generation.generatedUrl,
+          }),
           s.t
         );
 
         if (validation.success === false) {
-          set({ error: validation.firstError });
+          set((state) => ({ ui: { ...state.ui, error: validation.firstError } }));
           return;
         }
 
-        set({ isGeneratingPost: true, error: null });
-        const { generateNewsletterContent } = useGeneration({ t: s.t });
-        const result = await generateNewsletterContent({ prompt: s.prompt, businessName: s.businessName });
+        set((state) => ({
+          generation: { ...state.generation, isGeneratingPost: true },
+          ui: { ...state.ui, error: null },
+        }));
 
-        if (result && "error" in result) {
-          set({ error: `Failed to generate newsletter: ${result.error}`, isGeneratingPost: false });
+        const result = await generateNewsletter({
+          prompt: s.draft.prompt,
+          businessName: s.business.name,
+        });
+
+        if (result.success === false) {
+          set((state) => ({
+            ui: { ...state.ui, error: `Failed to generate newsletter: ${result.error}` },
+            generation: { ...state.generation, isGeneratingPost: false },
+          }));
         } else {
-          set({ newsletter: result.newsletterText, isGeneratingPost: false });
+          set((state) => ({
+            generation: {
+              ...state.generation,
+              newsletter: result.newsletterText,
+              isGeneratingPost: false,
+            },
+          }));
         }
       },
 
       handleRetry: async () => {
         const s = get();
-        if (s.retryCount >= 3) {
-          set({ error: "Maximum retry attempts reached. Please try again with different inputs." });
+        if (s.ui.retryCount >= 3) {
+          set((state) => ({
+            ui: {
+              ...state.ui,
+              error: 'Maximum retry attempts reached. Please try again with different inputs.',
+            },
+          }));
           return;
         }
-        if (s.lastPrompt) {
-          set({ prompt: s.lastPrompt });
-          set((prev) => ({ retryCount: prev.retryCount + 1 }));
+        if (s.ui.lastPrompt) {
+          set((state) => ({
+            draft: { ...state.draft, prompt: s.ui.lastPrompt },
+            ui: { ...state.ui, retryCount: state.ui.retryCount + 1 },
+          }));
           await s.handleGenerate();
         } else {
-          set({ error: "No previous prompt to retry." });
+          set((state) => ({ ui: { ...state.ui, error: 'No previous prompt to retry.' } }));
         }
       },
 
-      reset: () => set({
-        prompt: "",
-        userName: "",
-        businessName: "",
-        userEmail: "",
-        userPhone: "",
-        selectedPalette: "",
-        generatedCode: "",
-        generatedUrl: "",
-        newsletter: "",
-        isGeneratingPost: false,
-        modificationPrompt: "",
-        error: null,
-        pageState: "form",
-        lastPrompt: "",
-        retryCount: 0,
-        services: "",
-        location: "",
-        themeColor: "#10b981",
-        healthStatus: "",
-      }),
+      reset: () =>
+        set((state) => ({
+          user: { name: '', email: '', phone: '' },
+          business: { name: '', services: '', location: '' },
+          draft: {
+            prompt: '',
+            modificationPrompt: '',
+            selectedPalette: '',
+            themeColor: '#10b981',
+          },
+          generation: { ...initialGenerationState },
+          ui: {
+            ...state.ui,
+            pageState: 'form',
+            error: null,
+            lastPrompt: '',
+            retryCount: 0,
+            healthStatus: { ...initialHealthStatus },
+          },
+        })),
 
       clearPrivateData: () => {
         get().reset();
@@ -254,14 +406,20 @@ export const useAppStore = create<AppState>()(
       },
     }),
     {
-      name: "digital-ally-state-storage",
+      name: 'digital-ally-state-storage',
       storage: createJSONStorage(() => localStorage),
       partialize: (state) => ({
-        userName: state.userName,
-        businessName: state.businessName,
-        userEmail: state.userEmail,
-        userPhone: state.userPhone,
-        language: state.language,
+        privacyMode: state.privacyMode,
+        user: state.user,
+        business: state.business,
+        draft: {
+          prompt: state.draft.prompt,
+          selectedPalette: state.draft.selectedPalette,
+          themeColor: state.draft.themeColor,
+        },
+        ui: {
+          language: state.ui.language,
+        },
       }),
     }
   )

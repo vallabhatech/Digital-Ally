@@ -61,7 +61,8 @@ describe('websiteFormSchema', () => {
 describe('modificationSchema', () => {
   it('accepts valid modification prompt', () => {
     expect(
-      modificationSchema.safeParse({ modificationPrompt: 'Make the headline bolder please.' }).success
+      modificationSchema.safeParse({ modificationPrompt: 'Make the headline bolder please.' })
+        .success
     ).toBe(true);
   });
 

@@ -1,7 +1,16 @@
-import { describe, it, expect } from 'vitest'; // or 'jest' depending on the project setup
+import React from 'react';
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import { AppProvider } from './AppContext';
 
-describe('AppContext Placeholder', () => {
-  it('should satisfy the structural linter checks', () => {
-    expect(true).toBe(true);
+describe('AppProvider', () => {
+  it('renders children without requiring a React context state container', () => {
+    render(
+      <AppProvider>
+        <p>child content</p>
+      </AppProvider>
+    );
+
+    expect(screen.getByText('child content')).toBeInTheDocument();
   });
 });

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import { useGeneration } from '@/hooks/useGeneration';
-import * as geminiService from '@/services/geminiService';
+import * as geminiService from '@/features/generation/geminiService';
 
 const mockT = vi.fn((key: string) => key);
 
@@ -28,11 +28,12 @@ describe('useGeneration', () => {
   });
 
   it('retries website generation and returns success if service passes', async () => {
-    const serviceSpy = vi.spyOn(geminiService, 'generateWebsite');
-
-    serviceSpy
-      .mockRejectedValueOnce(new Error('Transient'))
-      .mockResolvedValueOnce('<!doctype html><body>ok</body>');
+    const serviceSpy = vi
+      .spyOn(geminiService, 'generateWebsite')
+      .mockImplementation(async (request) => {
+        request.onRetry?.(1, new Error('Transient'));
+        return { success: true, code: '<!doctype html><body>ok</body>' };
+      });
 
     const { result } = renderHook(() => useGeneration({ t: mockT }));
 
@@ -51,7 +52,7 @@ describe('useGeneration', () => {
     );
 
     expect(response).toEqual({ success: true, code: '<!doctype html><body>ok</body>' });
-    expect(serviceSpy).toHaveBeenCalledTimes(2);
+    expect(serviceSpy).toHaveBeenCalledTimes(1);
     serviceSpy.mockRestore();
   });
 });
