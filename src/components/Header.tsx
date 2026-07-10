@@ -14,7 +14,6 @@ export const Header: React.FC = () => {
   const clearPrivateData = useAppStore((state) => state.clearPrivateData);
   const handleSelectExample = useAppStore((state) => state.handleSelectExample);
 
-
   // 2. Functional wrappers to adapt old setter states safely
   const setLanguage = (val: string) => setField('language', val);
   const setPageState = (val: "form" | "loading" | "result" | "dashboard") => setField('pageState', val);
@@ -22,7 +21,7 @@ export const Header: React.FC = () => {
   // 3. Keep your local UI state variables exactly the same
   const [isExamplesOpen, setIsExamplesOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false); // Mobile menu toggle
-  const [dropdownRef] = [useRef<HTMLDivElement>(null)];
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   const getLinkClasses = (linkState: 'form' | 'dashboard') => {
     const baseClasses = 'hover:text-lime-700 transition-colors px-1 w-full text-left md:w-auto';
