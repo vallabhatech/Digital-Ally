@@ -16,6 +16,14 @@ vi.mock('@google/genai', () => {
   };
 });
 
+const mockEnv = {
+  GEMINI_API_KEY: 'test-key',
+  NODE_ENV: 'test'
+};
+vi.mock('./env.js', () => ({
+  env: mockEnv
+}));
+
 vi.mock('ioredis', () => {
   class MockRedis {
     constructor() {
@@ -59,7 +67,7 @@ const { handleHealth } = await import('./index.js');
 
 describe('GET /api/health', () => {
   beforeEach(() => {
-    process.env.GEMINI_API_KEY = 'test-key';
+    mockEnv.GEMINI_API_KEY = 'test-key';
     generateContentMock.mockReset();
   });
 
@@ -87,7 +95,7 @@ describe('GET /api/health', () => {
   });
 
   it('returns unhealthy when the Gemini API key is missing', async () => {
-    delete process.env.GEMINI_API_KEY;
+    delete mockEnv.GEMINI_API_KEY;
 
     const req = {};
     const res = {

@@ -1,6 +1,8 @@
-import React, { useState, useCallback, useContext, useMemo } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { sanitizePreviewHtml } from '@/utils/sanitize';
-import { AppContext } from '@/app/context/AppContext';
+import { useAppStore } from '@/store/useAppStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useAppActions } from '@/hooks/useAppActions';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { modificationSchema } from '@/shared/validation';
@@ -19,28 +21,24 @@ import { ExportActions } from '@/components/ui/ExportActions';
 import { ModificationForm } from '@/components/ui/ModificationForm';
 
 export const OutputPanel: React.FC = () => {
-  const context = useContext(AppContext);
-
   const [copied, setCopied] = useState(false);
   const [view, setView] = useState<'preview' | 'code'>('preview');
-  const {
-    generatedCode,
-    error,
-    t,
-    reset,
-    handleAssist,
-    generatedUrl,
-    newsletter,
-    isGeneratingPost,
-    handleGenerateNewsletter,
-    language,
-    setError,
-    retryCount,
-    handleRetry,
-    modificationPrompt,
-    setModificationPrompt,
-    healthStatus,
-  } = context!;
+  const [isReporting, setIsReporting] = useState(false);
+
+  const { t } = useTranslation();
+  const { reset, handleAssist, handleGenerateNewsletter, handleRetry } = useAppActions();
+
+  const generatedCode = useAppStore((state) => state.generatedCode);
+  const error = useAppStore((state) => state.error);
+  const setError = useAppStore((state) => state.setError);
+  const generatedUrl = useAppStore((state) => state.generatedUrl);
+  const newsletter = useAppStore((state) => state.newsletter);
+  const isGeneratingPost = useAppStore((state) => state.isGeneratingPost);
+  const language = useAppStore((state) => state.language);
+  const retryCount = useAppStore((state) => state.retryCount);
+  const modificationPrompt = useAppStore((state) => state.modificationPrompt);
+  const setModificationPrompt = useAppStore((state) => state.setModificationPrompt);
+  const healthStatus = useAppStore((state) => state.healthStatus);
 
   const { html: safeHtml, hadUnsafeContent } = useMemo(
     () => sanitizePreviewHtml(generatedCode || ''),
@@ -104,6 +102,31 @@ export const OutputPanel: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }, [generatedCode]);
+
+  const handleReportAbuse = useCallback(async () => {
+    try {
+      setIsReporting(true);
+      const res = await fetch('/api/v1/abuse/report', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: generatedUrl || 'http://localhost',
+          reason: 'inappropriate',
+          description: 'User reported this generated content as inappropriate.'
+        })
+      });
+      if (res.ok) {
+        alert(t('reportSubmitted') || 'Report submitted successfully. Thank you.');
+      } else {
+        alert(t('reportFailed') || 'Failed to submit report.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert(t('reportFailed') || 'Failed to submit report.');
+    } finally {
+      setIsReporting(false);
+    }
+  }, [generatedUrl, t]);
 
   const handleRegenerate = useCallback(() => {
     const result = validateModification();
@@ -180,6 +203,14 @@ export const OutputPanel: React.FC = () => {
           </p>
         )}
         <div className="flex items-center gap-2 justify-center lg:justify-end">
+          <button
+            onClick={handleReportAbuse}
+            disabled={isReporting}
+            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-400 hover:text-red-400 transition-colors text-sm"
+            title="Report Abuse"
+          >
+            {isReporting ? 'Reporting...' : 'Report Abuse'}
+          </button>
           <button
             onClick={handleCopy}
             className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"

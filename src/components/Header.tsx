@@ -1,26 +1,23 @@
-import React, { useContext, useState, useRef, useEffect } from 'react';
-import { AppContext } from '@/app/context/AppContext';
+import React, { useState, useRef, useEffect } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useAppActions } from '@/hooks/useAppActions';
 import { DigitalAllyLogoIcon, GlobeIcon, SparklesIcon } from '@/components/IconSet';
 import { LANGUAGES, EXAMPLE_PROMPTS } from '@/shared/constants';
 
 export const Header: React.FC = () => {
-  const context = useContext(AppContext);
   const [isExamplesOpen, setIsExamplesOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false); // Mobile menu toggle
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const {
-    language,
-    setLanguage,
-    t,
-    pageState,
-    setPageState,
-    handleSelectExample,
-    privacyMode,
-    setPrivacyMode,
-    reviewPrivacyChoice,
-    clearPrivateData,
-  } = context!;
+  const language = useAppStore((state) => state.language);
+  const setLanguage = useAppStore((state) => state.setLanguage);
+  const pageState = useAppStore((state) => state.pageState);
+  const setPageState = useAppStore((state) => state.setPageState);
+  const privacyMode = useAppStore((state) => state.privacyMode);
+
+  const { t } = useTranslation();
+  const { handleSelectExample, setPrivacyMode, reviewPrivacyChoice, clearPrivateData } = useAppActions();
 
   const getLinkClasses = (linkState: 'form' | 'dashboard') => {
     const baseClasses = 'hover:text-lime-700 transition-colors px-1 w-full text-left md:w-auto';

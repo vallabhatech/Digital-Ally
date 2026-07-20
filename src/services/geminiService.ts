@@ -37,11 +37,11 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '';
 function getOrCreateClientID(): string {
   if (typeof window === 'undefined') return '';
 
-  const stored = sessionStorage.getItem(CLIENT_ID_KEY);
+  const stored = localStorage.getItem(CLIENT_ID_KEY);
   if (stored) return stored;
 
   const clientID = crypto.randomUUID();
-  sessionStorage.setItem(CLIENT_ID_KEY, clientID);
+  localStorage.setItem(CLIENT_ID_KEY, clientID);
   return clientID;
 }
 

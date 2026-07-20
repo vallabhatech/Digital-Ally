@@ -21,3 +21,19 @@ export const serverAnalysisSchema = z.object({
     .min(1, 'Prompt is required')
     .max(15000, 'Prompt exceeds maximum length of 15000 characters'),
 });
+
+export const logQuerySchema = z.object({
+  limit: z.coerce.number().min(1).max(1000).optional().default(100),
+  task: z.string().optional(),
+  statusCode: z.coerce.number().optional(),
+  since: z.string().optional(),
+  until: z.string().optional(),
+});
+
+export const auditQuerySchema = logQuerySchema;
+
+export const abuseReportSchema = z.object({
+  url: z.string().url('Must be a valid URL').optional(),
+  reason: z.enum(['inappropriate', 'spam', 'copyright', 'other']),
+  description: z.string().min(10).max(1000),
+});

@@ -1,5 +1,7 @@
-import React, { useState, useContext, useCallback, useEffect } from 'react';
-import { AppContext } from '@/app/context/AppContext';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useAppActions } from '@/hooks/useAppActions';
 import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { websiteFormSchema } from '@/shared/validation';
@@ -9,23 +11,30 @@ import { SectionCard } from '@/components/ui/SectionCard';
 import { PaletteSelector } from '@/components/PaletteSelector';
 
 export const InputPanel: React.FC = () => {
-    const context = useContext(AppContext);
+    const { t } = useTranslation();
+    const { handleGenerate } = useAppActions();
     
-    if (!context) {
-        return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h1>Loading Context...</h1>
-                <p>AppContext is not available yet</p>
-            </div>
-        );
-    }
-    
-    const { 
-        t, userName, setUserName, businessName, setBusinessName, userEmail, setUserEmail, 
-        userPhone, setUserPhone, prompt, setPrompt, selectedPalette, setSelectedPalette,
-        handleGenerate, language, error, services, setServices, location, setLocation,
-        themeColor, setThemeColor, healthStatus
-    } = context;
+    const userName = useAppStore((state) => state.userName);
+    const setUserName = useAppStore((state) => state.setUserName);
+    const businessName = useAppStore((state) => state.businessName);
+    const setBusinessName = useAppStore((state) => state.setBusinessName);
+    const userEmail = useAppStore((state) => state.userEmail);
+    const setUserEmail = useAppStore((state) => state.setUserEmail);
+    const userPhone = useAppStore((state) => state.userPhone);
+    const setUserPhone = useAppStore((state) => state.setUserPhone);
+    const prompt = useAppStore((state) => state.prompt);
+    const setPrompt = useAppStore((state) => state.setPrompt);
+    const selectedPalette = useAppStore((state) => state.selectedPalette);
+    const setSelectedPalette = useAppStore((state) => state.setSelectedPalette);
+    const language = useAppStore((state) => state.language);
+    const error = useAppStore((state) => state.error);
+    const services = useAppStore((state) => state.services);
+    const setServices = useAppStore((state) => state.setServices);
+    const location = useAppStore((state) => state.location);
+    const setLocation = useAppStore((state) => state.setLocation);
+    const themeColor = useAppStore((state) => state.themeColor);
+    const setThemeColor = useAppStore((state) => state.setThemeColor);
+    const healthStatus = useAppStore((state) => state.healthStatus);
 
     const formValues = {
         userName,

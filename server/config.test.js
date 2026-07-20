@@ -1,18 +1,20 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { getServerConfig, getModelForTask, getPublicConfig, AI_TASKS } from './config.js';
+import { describe, it, expect, vi } from 'vitest';
+import { AI_TASKS } from './config.js';
+
+vi.mock('./env.js', () => ({
+  env: {
+    GEMINI_MODEL: 'gemini-test',
+    GEMINI_MODEL_WEBSITE: 'gemini-website',
+    GEMINI_MODEL_NEWSLETTER: 'gemini-test',
+    GEMINI_MODEL_ANALYSIS: 'gemini-test',
+    DAILY_QUOTA: 25,
+    MONTHLY_QUOTA: 100,
+  }
+}));
+
+import { getServerConfig, getModelForTask, getPublicConfig } from './config.js';
 
 describe('server config', () => {
-  const originalEnv = { ...process.env };
-
-  beforeEach(() => {
-    process.env.GEMINI_MODEL = 'gemini-test';
-    process.env.GEMINI_MODEL_WEBSITE = 'gemini-website';
-    process.env.DAILY_QUOTA = '25';
-  });
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-  });
 
   it('exposes per-task model selection', () => {
     expect(getModelForTask('website')).toBe('gemini-website');

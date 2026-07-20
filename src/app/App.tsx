@@ -1,5 +1,6 @@
-import React, { useContext } from 'react';
-import { AppProvider, AppContext } from '@/app/context/AppContext';
+import React from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { useAppActions } from '@/hooks/useAppActions';
 import { Header } from '@/components/Header';
 import { HomePage } from '@/pages/HomePage';
 import { ResultPage } from '@/pages/ResultPage';
@@ -8,10 +9,9 @@ import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrivacyModal } from '@/components/PrivacyModal';
 
 const AppContent: React.FC = () => {
-  const context = useContext(AppContext);
-  if (!context) return null;
-
-  const { pageState, privacyMode, setPrivacyMode } = context;
+  const pageState = useAppStore((state) => state.pageState);
+  const privacyMode = useAppStore((state) => state.privacyMode);
+  const { setPrivacyMode } = useAppActions();
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -33,9 +33,7 @@ const AppContent: React.FC = () => {
 };
 
 const App: React.FC = () => (
-  <AppProvider>
-    <AppContent />
-  </AppProvider>
+  <AppContent />
 );
 
 export default App;

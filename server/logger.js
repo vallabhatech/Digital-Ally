@@ -1,8 +1,21 @@
+import winston from 'winston';
 import { recordAuditEvent } from './auditLog.js';
+import { env } from './env.js';
+
+export const logger = winston.createLogger({
+  level: env.NODE_ENV === 'development' ? 'debug' : 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.Console()
+  ],
+});
 
 /**
  * Structured JSON logger middleware for AI gateway routes.
- * Logs request metadata and response size to stdout and the in-memory audit log.
+ * Logs request metadata and response size to the winston logger and the in-memory audit log.
  */
 export function createLogger({ taskResolver } = {}) {
   return (req, res, next) => {
@@ -39,7 +52,12 @@ export function createLogger({ taskResolver } = {}) {
         quota: req.quotaInfo || null,
       };
 
-      console.log(JSON.stringify(logEntry));
+      if (success) {
+        logger.info('AI Request Successful', logEntry);
+      } else {
+        logger.warn('AI Request Failed', logEntry);
+      }
+      
       recordAuditEvent(logEntry);
     };
 

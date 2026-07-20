@@ -95,6 +95,32 @@ function compareValues(left, right, sortBy) {
   });
 }
 
+function findIndexByTime(logs, timeMs, isStart) {
+  if (logs.length === 0) return isStart ? 0 : -1;
+  let low = 0;
+  let high = logs.length - 1;
+  let result = isStart ? 0 : logs.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const midTime = Date.parse(logs[mid].timestamp || '');
+    if (Number.isNaN(midTime)) {
+      if (isStart) low = mid + 1;
+      else high = mid - 1;
+      continue;
+    }
+    if (midTime === timeMs) {
+      return mid;
+    } else if (midTime < timeMs) {
+      if (isStart) result = mid + 1;
+      low = mid + 1;
+    } else {
+      if (!isStart) result = mid - 1;
+      high = mid - 1;
+    }
+  }
+  return result;
+}
+
 export function queryRequestLogs(logs, query = {}) {
   const ip = normalizeString(query.ip);
   const endpoint = normalizeString(query.endpoint);
@@ -129,8 +155,25 @@ export function queryRequestLogs(logs, query = {}) {
   });
   const { value: offsetValue } = parseOffsetParam(offsetQuery, 'offset');
 
+  let startIndexBound = 0;
+  let endIndexBound = logs.length - 1;
+
+  if (since !== null) {
+    startIndexBound = Math.max(startIndexBound, findIndexByTime(logs, since, true));
+  }
+  if (until !== null) {
+    endIndexBound = Math.min(endIndexBound, findIndexByTime(logs, until, false));
+  }
+
+  let candidates = logs;
+  if (startIndexBound <= endIndexBound && logs.length > 0) {
+    candidates = logs.slice(startIndexBound, endIndexBound + 1);
+  } else if (startIndexBound > endIndexBound) {
+    candidates = [];
+  }
+
   const limit = limitValue ?? DEFAULT_PAGE_SIZE;
-  const filtered = logs.filter((entry) => {
+  const filtered = candidates.filter((entry) => {
     if (ip && String(entry.ip || '') !== ip) {
       return false;
     }
@@ -141,15 +184,6 @@ export function queryRequestLogs(logs, query = {}) {
         .toLowerCase()
         .includes(endpoint.toLowerCase())
     ) {
-      return false;
-    }
-
-    const entryTime = Date.parse(entry.timestamp || '');
-    if (since !== null && (Number.isNaN(entryTime) || entryTime < since)) {
-      return false;
-    }
-
-    if (until !== null && (Number.isNaN(entryTime) || entryTime > until)) {
       return false;
     }
 

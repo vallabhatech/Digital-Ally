@@ -152,6 +152,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     stopSpeaking: 'Stop Speaking',
     yourWebsite: 'Your Website Preview',
     customizeWebsite: 'View & Customize',
+    reportSubmitted: 'Report submitted successfully. Thank you.',
+    reportFailed: 'Failed to submit report. Please try again.',
   },
   'te-IN': {
     headline2: 'మీ వెబ్‌సైట్‌ను పొందండి.',
@@ -212,7 +214,7 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     Modern: 'ఆధునిక',
     Vibrant: 'ఉత్సాహపూరితమైన',
     Corporate: 'కార్పొరేట్',
-    Elegant: ' taoచితమైనది',
+    Elegant: 'సొగసైన',
     customizeAndRegenerate: 'అనుకూలీకరించండి & పునరుత్పత్తి చేయండి',
     regenerateButton: 'వెబ్‌సైట్‌ను పునరుత్పత్తి చేయండి',
     aiAssistant: 'AI సహాయకుడు',
@@ -255,6 +257,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     stopSpeaking: 'మాట్లాడటం ఆపండి',
     yourWebsite: 'మీ వెబ్‌సైట్ ప్రివ్యూ',
     customizeWebsite: 'వీక్షించండి & అనుకూలీకరించండి',
+    reportSubmitted: 'నివేదిక విజయవంతంగా సమర్పించబడింది. ధన్యవాదాలు.',
+    reportFailed: 'నివేదికను సమర్పించడంలో విఫలమైంది. దయచేసి మళ్లీ ప్రయత్నించండి.',
   },
   'hi-IN': {
     headline2: 'अपनी वेबसाइट पाएं।',
@@ -357,6 +361,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     stopSpeaking: 'बोलना बंद करो',
     yourWebsite: 'आपकी वेबसाइट का पूर्वावलोकन',
     customizeWebsite: 'देखें और अनुकूलित करें',
+    reportSubmitted: 'रिपोर्ट सफलतापूर्वक सबमिट की गई। धन्यवाद।',
+    reportFailed: 'रिपोर्ट सबमिट करने में विफल। कृपया पुन: प्रयास करें।',
   },
 };
 

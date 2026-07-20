@@ -1,5 +1,6 @@
-import React, { useState, useContext } from 'react';
-import { AppContext } from '@/app/context/AppContext';
+import React, { useState } from 'react';
+import { useAppStore } from '@/store/useAppStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { useTextToSpeech } from '@/hooks/useTextToSpeech';
 import { analyzeAndTranslateDashboard } from '@/services/geminiService';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
@@ -21,13 +22,21 @@ const DashboardCard: React.FC<{ title: string, icon: React.ReactNode, children: 
 );
 
 export const DashboardPage: React.FC = () => {
-  const context = useContext(AppContext);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
   const { isSpeaking, speak, cancel } = useTextToSpeech();
   
-  if (!context) return null;
-  const { t, businessName, userName, userEmail, userPhone, setPageState, language, error, setError, generatedCode } = context;
+  const { t } = useTranslation();
+  
+  const businessName = useAppStore((state) => state.businessName);
+  const userName = useAppStore((state) => state.userName);
+  const userEmail = useAppStore((state) => state.userEmail);
+  const userPhone = useAppStore((state) => state.userPhone);
+  const setPageState = useAppStore((state) => state.setPageState);
+  const language = useAppStore((state) => state.language);
+  const error = useAppStore((state) => state.error);
+  const setError = useAppStore((state) => state.setError);
+  const generatedCode = useAppStore((state) => state.generatedCode);
 
   const handleAnalyze = async () => {
     if (isSpeaking) {

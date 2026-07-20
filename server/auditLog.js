@@ -26,22 +26,52 @@ export function getAuditLog() {
   return [...auditLog];
 }
 
+function findIndexByTime(logs, timeMs, isStart) {
+  let low = 0;
+  let high = logs.length - 1;
+  let result = isStart ? 0 : logs.length - 1;
+  while (low <= high) {
+    const mid = Math.floor((low + high) / 2);
+    const midTime = new Date(logs[mid].timestamp).getTime();
+    if (midTime === timeMs) {
+      return mid;
+    } else if (midTime < timeMs) {
+      if (isStart) result = mid + 1;
+      low = mid + 1;
+    } else {
+      if (!isStart) result = mid - 1;
+      high = mid - 1;
+    }
+  }
+  return result;
+}
+
 export function queryAuditLog({ limit = 100, task, statusCode, since, until } = {}) {
-  let entries = getAuditLog();
+  let entries = auditLog;
+
+  let startIndex = 0;
+  let endIndex = entries.length - 1;
+
+  if (since) {
+    const sinceDate = new Date(since).getTime();
+    startIndex = Math.max(startIndex, findIndexByTime(entries, sinceDate, true));
+  }
+  if (until) {
+    const untilDate = new Date(until).getTime();
+    endIndex = Math.min(endIndex, findIndexByTime(entries, untilDate, false));
+  }
+
+  if (startIndex > endIndex || entries.length === 0) {
+    return { entries: [], total: 0, returned: 0, limit };
+  }
+
+  entries = entries.slice(startIndex, endIndex + 1);
 
   if (task) {
     entries = entries.filter((e) => e.task === task);
   }
   if (statusCode) {
     entries = entries.filter((e) => e.statusCode === statusCode);
-  }
-  if (since) {
-    const sinceDate = new Date(since);
-    entries = entries.filter((e) => new Date(e.timestamp) >= sinceDate);
-  }
-  if (until) {
-    const untilDate = new Date(until);
-    entries = entries.filter((e) => new Date(e.timestamp) <= untilDate);
   }
 
   const total = entries.length;
