@@ -17,7 +17,7 @@ interface AppState {
   generatedUrl: string;
   newsletter: string;
   isGeneratingPost: boolean;
-  pageState: 'form' | 'loading' | 'result' | 'dashboard';
+  pageState: 'form' | 'loading' | 'result' | 'dashboard' | 'admin';
   language: string;
   error: string | null;
   services: string;
@@ -39,7 +39,7 @@ interface AppState {
   setGeneratedUrl: (val: string) => void;
   setNewsletter: (val: string) => void;
   setIsGeneratingPost: (val: boolean) => void;
-  setPageState: (val: 'form' | 'loading' | 'result' | 'dashboard') => void;
+  setPageState: (val: 'form' | 'loading' | 'result' | 'dashboard' | 'admin') => void;
   setLanguage: (val: string) => void;
   setError: (val: string | null) => void;
   setServices: (val: string) => void;

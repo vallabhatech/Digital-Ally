@@ -123,6 +123,9 @@ router.get(`/${API_VERSION}/logs`, requireAdmin, validateQuery(logQuerySchema), 
 router.get('/logs', requireAdmin, validateQuery(logQuerySchema), handleLogs);
 router.get(`/${API_VERSION}/audit`, requireAdmin, validateQuery(auditQuerySchema), handleAudit);
 router.get('/audit', requireAdmin, validateQuery(auditQuerySchema), handleAudit);
+router.get(`/${API_VERSION}/abuse/reports`, requireAdmin, (req, res) => {
+  import('../services/logStore.js').then(({ abuseReports }) => res.json({ reports: abuseReports }));
+});
 router.post(`/${API_VERSION}/abuse/report`, generateLimiter, handleAbuseReport);
 
 export default router;

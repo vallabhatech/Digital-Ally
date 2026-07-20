@@ -5,6 +5,7 @@ import { Header } from '@/components/Header';
 import { HomePage } from '@/pages/HomePage';
 import { ResultPage } from '@/pages/ResultPage';
 import { DashboardPage } from '@/pages/DashboardPage';
+import { AdminPage } from '@/pages/AdminPage';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrivacyModal } from '@/components/PrivacyModal';
 
@@ -26,6 +27,7 @@ const AppContent: React.FC = () => {
         )}
         {pageState === 'result' && <ResultPage />}
         {pageState === 'dashboard' && <DashboardPage />}
+        {pageState === 'admin' && <AdminPage />}
       </main>
       {!privacyMode && <PrivacyModal onChoose={setPrivacyMode} />}
     </div>

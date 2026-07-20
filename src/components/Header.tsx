@@ -19,7 +19,7 @@ export const Header: React.FC = () => {
   const { t } = useTranslation();
   const { handleSelectExample, setPrivacyMode, reviewPrivacyChoice, clearPrivateData } = useAppActions();
 
-  const getLinkClasses = (linkState: 'form' | 'dashboard') => {
+  const getLinkClasses = (linkState: 'form' | 'dashboard' | 'admin') => {
     const baseClasses = 'hover:text-lime-700 transition-colors px-1 w-full text-left md:w-auto';
     const activeClasses = 'text-lime-600 font-semibold md:border-b-2 md:border-lime-600';
     return `${baseClasses} ${pageState === linkState ? activeClasses : 'md:border-b-2 md:border-transparent'}`;
@@ -147,6 +147,9 @@ export const Header: React.FC = () => {
           <button onClick={() => setPageState('dashboard')} className={getLinkClasses('dashboard')}>
             {t('dashboard')}
           </button>
+          <button onClick={() => setPageState('admin')} className={getLinkClasses('admin')}>
+            Admin
+          </button>
           <div className="flex items-center gap-2">
             <GlobeIcon className="w-5 h-5 text-gray-500" />
             <select
@@ -208,6 +211,12 @@ export const Header: React.FC = () => {
             className={`${getLinkClasses('dashboard')} border-b border-gray-100 pb-2`}
           >
             {t('dashboard')}
+          </button>
+          <button 
+            onClick={() => { setPageState('admin'); setIsMenuOpen(false); }} 
+            className={`${getLinkClasses('admin')} border-b border-gray-100 pb-2`}
+          >
+            Admin
           </button>
 
           <div className="flex items-center justify-between pt-1">
