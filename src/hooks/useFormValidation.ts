@@ -2,8 +2,9 @@ import { useState, useCallback, useMemo } from 'react';
 import { z } from 'zod';
 import { validateField, validateSchema } from '@/shared/validation';
 
-type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+import type { TranslationKey } from '@/hooks/useTranslation';
 
+type TranslateFn = (key: TranslationKey, params?: Record<string, string | number>) => string;
 interface UseFormValidationOptions<T extends z.ZodRawShape> {
   schema: z.ZodObject<T>;
   values: Record<keyof T & string, unknown>;

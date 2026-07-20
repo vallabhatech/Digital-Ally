@@ -5,31 +5,23 @@ import { sanitizeFormData, validateSchema } from '@/shared/validation';
 import { websiteFormSchema, newsletterFormSchema } from '@/shared/validation';
 import { withRetry } from '@/utils/retry';
 import { error as logError, info as logInfo } from '@/utils/logger';
+import type { TranslationKey } from '@/hooks/useTranslation';
 
 interface UseGenerationProps {
-  t: (key: string, params?: Record<string, string | number>) => string;
+  t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
 
-type WebsiteGenerationResult =
+export type WebsiteGenerationResult =
   | { success: true; code: string }
   | { success: false; error: string };
 
-type NewsletterGenerationResult =
+export type NewsletterGenerationResult =
   | { success: true; newsletterText: string }
   | { success: false; error: string };
 
 interface WebsiteGenerationOptions {
   onRetry?: (attempt: number, error: Error) => void;
 }
-
-type ValidationResult<T> =
-  | { success: true; data: T }
-  | { success: false; errors: Record<string, string>; firstError: string };
-
-type ValidationFailure<T> = ValidationResult<T> & { success: false };
-
-const isValidationFailure = <T>(result: ValidationResult<T>): result is ValidationFailure<T> =>
-  result.success === false;
 
 export function useGeneration({ t }: UseGenerationProps) {
   const generateWebsiteContent = useCallback(
@@ -40,7 +32,7 @@ export function useGeneration({ t }: UseGenerationProps) {
     ): Promise<WebsiteGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(websiteFormSchema, sanitized, t);
-      if (!validation.success) {
+      if (validation.success === false) {
         return { success: false, error: validation.firstError };
       }
 
@@ -83,7 +75,7 @@ export function useGeneration({ t }: UseGenerationProps) {
     async (formState: Record<string, string>): Promise<NewsletterGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(newsletterFormSchema, sanitized, t);
-      if (!validation.success) {
+      if (validation.success === false) {
         return { success: false, error: validation.firstError };
       }
 

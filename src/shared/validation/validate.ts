@@ -1,10 +1,11 @@
 import { z } from 'zod';
 import { FIELD_LIMITS, VALIDATION_ERROR_KEYS } from './schemas';
+import type { TranslationKey } from '@/hooks/useTranslation';
 
-type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
+type TranslateFn = (key: TranslationKey, params?: Record<string, string | number>) => string;
 
 /** Map a Zod issue to a user-facing translation key with optional params. */
-export function getIssueTranslationKey(issue: z.ZodIssue): { key: string; params?: Record<string, string | number> } {
+export function getIssueTranslationKey(issue: z.ZodIssue): { key: TranslationKey; params?: Record<string, string | number> } {
   const field = issue.path[0] as string;
   const limits = FIELD_LIMITS[field as keyof typeof FIELD_LIMITS];
 
@@ -25,10 +26,10 @@ export function getIssueTranslationKey(issue: z.ZodIssue): { key: string; params
   }
 
   if (typeof issue.message === 'string' && issue.message.startsWith('validation')) {
-    return { key: issue.message };
+    return { key: issue.message as TranslationKey };
   }
 
-  return { key: issue.message || VALIDATION_ERROR_KEYS.required };
+  return { key: (issue.message as TranslationKey) || VALIDATION_ERROR_KEYS.required };
 }
 
 export function formatZodError(error: z.ZodError, t: TranslateFn): Record<string, string> {

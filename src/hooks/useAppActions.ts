@@ -69,7 +69,7 @@ export function useAppActions() {
         store.setPageState('result');
       }
     } else {
-      store.setError(`Failed to generate website: ${result.error}`);
+      store.setError(`Failed to generate website: ${(result as {success: false, error: string}).error}`);
       store.setGeneratedCode(store.generatedCode || '');
       store.setPageState('result');
       store.setRetryCount((prev) => prev + 1);
@@ -122,7 +122,7 @@ export function useAppActions() {
       if (result.success) {
         store.setNewsletter(result.newsletterText);
       } else {
-        store.setError(`Failed to generate newsletter: ${result.error}`);
+        store.setError(`Failed to generate newsletter: ${(result as {success: false, error: string}).error}`);
       }
     } catch (error) {
       store.setError(error instanceof Error ? error.message : 'An unknown error occurred.');
@@ -156,7 +156,7 @@ export function useAppActions() {
   }, [store]);
 
   const setPrivacyMode = useCallback((mode: AiProcessingMode) => {
-    savePrivacyPreference({ mode, timestamp: Date.now(), version: '1.0' });
+    savePrivacyPreference(mode);
     store.setPrivacyModeState(mode);
   }, [store]);
 

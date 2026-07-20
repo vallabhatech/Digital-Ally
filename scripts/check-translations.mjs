@@ -25,6 +25,7 @@ const getPropertyName = (property) => {
 };
 
 const constantsSource = parseFile(constantsPath);
+const schemasSource = parseFile(path.join(sourceDirectory, 'shared', 'validation', 'schemas.ts'));
 const translations = new Map();
 const configuredLocales = new Set();
 const dynamicTranslationKeys = new Set();
@@ -34,26 +35,37 @@ const visitConstants = (node) => {
     ts.isVariableDeclaration(node) &&
     ts.isIdentifier(node.name) &&
     node.initializer &&
-    ts.isArrayLiteralExpression(node.initializer)
+    (ts.isArrayLiteralExpression(node.initializer) || ts.isObjectLiteralExpression(node.initializer) || ts.isAsExpression(node.initializer))
   ) {
-    const target =
-      node.name.text === 'LANGUAGES'
-        ? { propertyName: 'value', values: configuredLocales }
-        : node.name.text === 'COLOR_PALETTES'
-          ? { propertyName: 'name', values: dynamicTranslationKeys }
-          : null;
+    let initializer = node.initializer;
+    if (ts.isAsExpression(initializer)) initializer = initializer.expression;
 
-    if (target) {
-      for (const element of node.initializer.elements) {
-        if (!ts.isObjectLiteralExpression(element)) continue;
-        for (const property of element.properties) {
-          if (
-            ts.isPropertyAssignment(property) &&
-            getPropertyName(property) === target.propertyName &&
-            ts.isStringLiteral(property.initializer)
-          ) {
-            target.values.add(property.initializer.text);
+    if (ts.isArrayLiteralExpression(initializer)) {
+      const target =
+        node.name.text === 'LANGUAGES'
+          ? { propertyName: 'value', values: configuredLocales }
+          : node.name.text === 'COLOR_PALETTES'
+            ? { propertyName: 'name', values: dynamicTranslationKeys }
+            : null;
+
+      if (target) {
+        for (const element of initializer.elements) {
+          if (!ts.isObjectLiteralExpression(element)) continue;
+          for (const property of element.properties) {
+            if (
+              ts.isPropertyAssignment(property) &&
+              getPropertyName(property) === target.propertyName &&
+              ts.isStringLiteral(property.initializer)
+            ) {
+              target.values.add(property.initializer.text);
+            }
           }
+        }
+      }
+    } else if (ts.isObjectLiteralExpression(initializer) && node.name.text === 'VALIDATION_ERROR_KEYS') {
+      for (const property of initializer.properties) {
+        if (ts.isPropertyAssignment(property) && ts.isStringLiteral(property.initializer)) {
+          dynamicTranslationKeys.add(property.initializer.text);
         }
       }
     }
@@ -85,6 +97,7 @@ const visitConstants = (node) => {
 };
 
 visitConstants(constantsSource);
+visitConstants(schemasSource);
 
 if (translations.size === 0) {
   console.error('Translation coverage failed: TRANSLATIONS could not be read.');
