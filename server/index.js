@@ -8,6 +8,7 @@ import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
 import Redis from 'ioredis';
 import cron from 'node-cron';
+import crypto from 'crypto'; // Added for generating cache keys safely
 import { createLogger } from './logger.js';
 import { queryRequestLogs } from './logQuery.js';
 import { validateBody } from './validation/middleware.js';
@@ -82,11 +83,11 @@ const redis = new Redis({
 
 redis.on('error', (err) => {
   console.warn('Redis connection error:', err.message);
-  console.warn('Rate limiting quotas will be unavailable.');
+  console.warn('Rate limiting quotas and query caching will be unavailable.');
 });
 
 redis.on('connect', () => {
-  console.log('Connected to Redis for quota tracking');
+  console.log('Connected to Redis for quota tracking and query caching optimization');
 });
 
 cron.schedule(
@@ -389,6 +390,52 @@ function attachGenerationMeta(res, result) {
   res.locals.responseSizeBytes = result.responseSizeBytes;
 }
 
+// Optimization Utility: Centralized function handling the Redis caching lookup/save strategy
+async function getOrExecuteCachedAiTask(task, prompt, outputFormat, res, executionCallback) {
+  if (redis.status !== 'ready') {
+    const result = await executionCallback();
+    attachGenerationMeta(res, result);
+    return result.text;
+  }
+
+  // Generate a distinct query hash to support exact schema criteria lookups cleanly
+  const normalizedPrompt = stripNonPrintable(prompt).trim();
+  const hash = crypto.createHash('sha256').update(`${task}:${outputFormat}:${normalizedPrompt}`).digest('hex');
+  const cacheKey = `cache:ai:${hash}`;
+
+  try {
+    const cachedData = await redis.get(cacheKey);
+    if (cachedData) {
+      const parsed = JSON.parse(cachedData);
+      res.set('X-Cache-Hit', 'true');
+      res.locals.modelUsed = parsed.model;
+      res.locals.responseSizeBytes = parsed.responseSizeBytes;
+      return parsed.text;
+    }
+  } catch (cacheErr) {
+    console.warn('Cache lookup failed cleanly, proceeding to source:', cacheErr.message);
+  }
+
+  // Cache miss - Execute main instruction callback block
+  const result = await executionCallback();
+  attachGenerationMeta(res, result);
+
+  try {
+    res.set('X-Cache-Hit', 'false');
+    const cachePayload = JSON.stringify({
+      text: result.text,
+      model: result.model,
+      responseSizeBytes: result.responseSizeBytes,
+    });
+    // Store in cache database with an expiration threshold of 1 hour (3600 seconds)
+    await redis.set(cacheKey, cachePayload, 'EX', 3600);
+  } catch (saveErr) {
+    console.warn('Failed to commit result payload into query cache database:', saveErr.message);
+  }
+
+  return result.text;
+}
+
 async function handleWebsiteGeneration(req, res) {
   try {
     const { prompt, outputFormat = 'html' } = req.validatedBody ?? req.body;
@@ -410,9 +457,14 @@ async function handleWebsiteGeneration(req, res) {
       Do not include any explanations or markdown formatting.`;
     }
 
-    const result = await callGemini('website', geminiPrompt);
-    attachGenerationMeta(res, result);
-    const generatedContent = result.text;
+    // Optimization: Wrapped call through cache interceptor
+    const generatedContent = await getOrExecuteCachedAiTask(
+      'website',
+      prompt,
+      outputFormat,
+      res,
+      () => callGemini('website', geminiPrompt)
+    );
 
     if (outputFormat === 'zip') {
       try {
@@ -434,9 +486,17 @@ async function handleWebsiteGeneration(req, res) {
 async function handleNewsletterGeneration(req, res) {
   try {
     const { prompt } = req.validatedBody ?? req.body;
-    const result = await callGemini('newsletter', prompt);
-    attachGenerationMeta(res, result);
-    return res.json({ text: result.text });
+    
+    // Optimization: Wrapped call through cache interceptor
+    const generatedText = await getOrExecuteCachedAiTask(
+      'newsletter',
+      prompt,
+      'text',
+      res,
+      () => callGemini('newsletter', prompt)
+    );
+
+    return res.json({ text: generatedText });
   } catch (err) {
     console.error('Newsletter generation failed', err);
     return res.status(500).json({ error: 'Server error' });
@@ -446,9 +506,17 @@ async function handleNewsletterGeneration(req, res) {
 async function handleAnalysisGeneration(req, res) {
   try {
     const { prompt } = req.validatedBody ?? req.body;
-    const result = await callGemini('analysis', prompt);
-    attachGenerationMeta(res, result);
-    return res.json({ text: result.text });
+
+    // Optimization: Wrapped call through cache interceptor
+    const generatedText = await getOrExecuteCachedAiTask(
+      'analysis',
+      prompt,
+      'text',
+      res,
+      () => callGemini('analysis', prompt)
+    );
+
+    return res.json({ text: generatedText });
   } catch (err) {
     console.error('Dashboard analysis failed', err);
     return res.status(500).json({ error: 'Server error' });
