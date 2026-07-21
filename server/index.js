@@ -6,9 +6,8 @@ import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { GoogleGenAI } from '@google/genai';
-import Redis from 'ioredis';
 import cron from 'node-cron';
-import crypto from 'crypto'; // Added for generating cache keys safely
+import crypto from 'crypto';
 import { createLogger } from './logger.js';
 import { queryRequestLogs } from './logQuery.js';
 import { validateBody } from './validation/middleware.js';
@@ -19,6 +18,17 @@ import {
 } from './validation/schemas.js';
 import { getServerConfig, getModelForTask, getPublicConfig, AI_TASKS } from './config.js';
 import { queryAuditLog } from './auditLog.js';
+import {
+  getRedis,
+  getMetrics,
+  safeGet,
+  safeSet,
+  safePipeline,
+  safeScan,
+  safeDel,
+  safeQuit,
+} from './db.js';
+import { RingBuffer } from './ringBuffer.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
@@ -73,22 +83,7 @@ const CONSENT_VERSION = serverConfig.consentVersion;
 const API_VERSION = 'v1';
 const API_DEPRECATION_SUNSET = 'Wed, 31 Dec 2026 23:59:59 GMT';
 
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  retryStrategy: (times) => Math.min(times * 50, 2000),
-  enableReadyCheck: false,
-  maxRetriesPerRequest: null,
-});
-
-redis.on('error', (err) => {
-  console.warn('Redis connection error:', err.message);
-  console.warn('Rate limiting quotas and query caching will be unavailable.');
-});
-
-redis.on('connect', () => {
-  console.log('Connected to Redis for quota tracking and query caching optimization');
-});
+const redis = getRedis();
 
 cron.schedule(
   '0 0 * * *',
@@ -96,9 +91,9 @@ cron.schedule(
     try {
       const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
       const pattern = `quota:daily:*:${yesterday}`;
-      const keys = await redis.keys(pattern);
+      const keys = await safeScan(pattern);
       if (keys?.length) {
-        await redis.del(...keys);
+        await safeDel(...keys);
         console.log(`Cleared ${keys.length} daily quota keys for ${yesterday}`);
       }
     } catch (err) {
@@ -112,28 +107,46 @@ const MAX_LOG_ENTRIES = 1000;
 const ERROR_THRESHOLD = 5;
 const ERROR_WINDOW = 10 * 60 * 1000;
 const BLOCK_DURATION = 60 * 60 * 1000;
+const BLOCK_CLEANUP_INTERVAL = 5 * 60 * 1000;
 
-const requestLog = [];
-const ipErrorCounts = new Map();
+const requestLog = new RingBuffer(MAX_LOG_ENTRIES);
+const ipErrorQueues = new Map();
 const blockedIPs = new Map();
+let lastBlockCleanup = Date.now();
 
 function addToLog(entry) {
   requestLog.push(entry);
-  if (requestLog.length > MAX_LOG_ENTRIES) requestLog.shift();
 }
 
 function trackError(ip) {
   const now = Date.now();
-  if (!ipErrorCounts.has(ip)) ipErrorCounts.set(ip, []);
-  const errors = ipErrorCounts.get(ip);
+  if (!ipErrorQueues.has(ip)) ipErrorQueues.set(ip, []);
+  const errors = ipErrorQueues.get(ip);
   errors.push(now);
-  const validErrors = errors.filter((timestamp) => now - timestamp < ERROR_WINDOW);
-  ipErrorCounts.set(ip, validErrors);
-  if (validErrors.length > ERROR_THRESHOLD) {
-    blockedIPs.set(ip, now + BLOCK_DURATION);
-    console.warn(`Client ${ip} blocked for 1 hour due to ${validErrors.length} errors in 10 minutes`);
+
+  while (errors.length > 0 && errors[0] < now - ERROR_WINDOW) {
+    errors.shift();
   }
-  return validErrors.length;
+
+  if (errors.length > ERROR_THRESHOLD) {
+    blockedIPs.set(ip, now + BLOCK_DURATION);
+    console.warn(`Client ${ip} blocked for 1 hour due to ${errors.length} errors in 10 minutes`);
+  }
+
+  if (now - lastBlockCleanup > BLOCK_CLEANUP_INTERVAL) {
+    for (const [blockedIp, unblockTime] of blockedIPs) {
+      if (now > unblockTime) blockedIPs.delete(blockedIp);
+    }
+    for (const [errorIp, queue] of ipErrorQueues) {
+      while (queue.length > 0 && queue[0] < now - ERROR_WINDOW) {
+        queue.shift();
+      }
+      if (queue.length === 0) ipErrorQueues.delete(errorIp);
+    }
+    lastBlockCleanup = now;
+  }
+
+  return errors.length;
 }
 
 function isIPBlocked(ip) {
@@ -296,12 +309,12 @@ async function quotaMiddleware(req, res, next) {
     const dailyKey = `quota:daily:${quotaKey}:${today}`;
     const monthlyKey = `quota:monthly:${quotaKey}:${monthKey}`;
 
-    const pipeline = redis.pipeline();
-    pipeline.incr(dailyKey);
-    pipeline.expire(dailyKey, DAILY_TTL);
-    pipeline.incr(monthlyKey);
-    pipeline.expire(monthlyKey, MONTHLY_TTL);
-    const results = await pipeline.exec();
+    const results = await safePipeline([
+      ['incr', dailyKey],
+      ['expire', dailyKey, DAILY_TTL],
+      ['incr', monthlyKey],
+      ['expire', monthlyKey, MONTHLY_TTL],
+    ]);
     if (!results) return next();
 
     const dailyIncr = results[0][1];
@@ -390,7 +403,6 @@ function attachGenerationMeta(res, result) {
   res.locals.responseSizeBytes = result.responseSizeBytes;
 }
 
-// Optimization Utility: Centralized function handling the Redis caching lookup/save strategy
 async function getOrExecuteCachedAiTask(task, prompt, outputFormat, res, executionCallback) {
   if (redis.status !== 'ready') {
     const result = await executionCallback();
@@ -398,40 +410,33 @@ async function getOrExecuteCachedAiTask(task, prompt, outputFormat, res, executi
     return result.text;
   }
 
-  // Generate a distinct query hash to support exact schema criteria lookups cleanly
   const normalizedPrompt = stripNonPrintable(prompt).trim();
   const hash = crypto.createHash('sha256').update(`${task}:${outputFormat}:${normalizedPrompt}`).digest('hex');
   const cacheKey = `cache:ai:${hash}`;
 
-  try {
-    const cachedData = await redis.get(cacheKey);
-    if (cachedData) {
+  const cachedData = await safeGet(cacheKey);
+  if (cachedData !== null) {
+    try {
       const parsed = JSON.parse(cachedData);
       res.set('X-Cache-Hit', 'true');
       res.locals.modelUsed = parsed.model;
       res.locals.responseSizeBytes = parsed.responseSizeBytes;
       return parsed.text;
+    } catch (parseErr) {
+      console.warn('Cache parse failed:', parseErr.message);
     }
-  } catch (cacheErr) {
-    console.warn('Cache lookup failed cleanly, proceeding to source:', cacheErr.message);
   }
 
-  // Cache miss - Execute main instruction callback block
   const result = await executionCallback();
   attachGenerationMeta(res, result);
 
-  try {
-    res.set('X-Cache-Hit', 'false');
-    const cachePayload = JSON.stringify({
-      text: result.text,
-      model: result.model,
-      responseSizeBytes: result.responseSizeBytes,
-    });
-    // Store in cache database with an expiration threshold of 1 hour (3600 seconds)
-    await redis.set(cacheKey, cachePayload, 'EX', 3600);
-  } catch (saveErr) {
-    console.warn('Failed to commit result payload into query cache database:', saveErr.message);
-  }
+  res.set('X-Cache-Hit', 'false');
+  const cachePayload = JSON.stringify({
+    text: result.text,
+    model: result.model,
+    responseSizeBytes: result.responseSizeBytes,
+  });
+  await safeSet(cacheKey, cachePayload, 3600);
 
   return result.text;
 }
@@ -602,9 +607,20 @@ async function checkGeminiHealth() {
 
 async function handleHealth(req, res) {
   const gemini = await checkGeminiHealth();
+  const dbMetrics = getMetrics();
   return res.status(gemini.ok ? 200 : 503).json({
     ok: gemini.ok,
     redis: redis.status,
+    db: {
+      operations: dbMetrics.operations,
+      errors: dbMetrics.errors,
+      cacheHits: dbMetrics.cacheHits,
+      cacheMisses: dbMetrics.cacheMisses,
+      avgLatencyMs: dbMetrics.operations > 0
+        ? (dbMetrics.totalLatencyMs / dbMetrics.operations).toFixed(2)
+        : 0,
+      lastError: dbMetrics.lastError,
+    },
     gemini: {
       configured: gemini.configured,
       reachable: gemini.reachable,
@@ -631,8 +647,8 @@ async function handleUsage(req, res) {
     const today = new Date().toISOString().split('T')[0];
     const monthKey = new Date().toISOString().slice(0, 7);
     const [dailyVal, monthlyVal] = await Promise.all([
-      redis.get(`quota:daily:${clientId}:${today}`),
-      redis.get(`quota:monthly:${clientId}:${monthKey}`),
+      safeGet(`quota:daily:${clientId}:${today}`),
+      safeGet(`quota:monthly:${clientId}:${monthKey}`),
     ]);
 
     return res.json({
@@ -649,7 +665,8 @@ async function handleUsage(req, res) {
 
 function handleLogs(req, res) {
   try {
-    const logQuery = queryRequestLogs(requestLog, req.query);
+    const logSnapshot = requestLog.toArray();
+    const logQuery = queryRequestLogs(logSnapshot, req.query);
     return res.json({
       requestLog: logQuery.entries,
       logCount: logQuery.total,
@@ -663,7 +680,7 @@ function handleLogs(req, res) {
         unblockTime: new Date(unblockTime).toISOString(),
       })),
       errorCounts: Object.fromEntries(
-        Array.from(ipErrorCounts.entries()).map(([ip, errors]) => [
+        Array.from(ipErrorQueues.entries()).map(([ip, errors]) => [
           ip,
           { count: errors.length, window: '10 minutes' },
         ])
@@ -751,11 +768,11 @@ if (process.env.NODE_ENV !== 'test') {
 export { app, handleHealth, checkGeminiHealth };
 
 process.on('SIGTERM', async () => {
-  if (redis?.status === 'ready') await redis.quit();
+  await safeQuit();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  if (redis?.status === 'ready') await redis.quit();
+  await safeQuit();
   process.exit(0);
 });
