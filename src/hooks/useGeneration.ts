@@ -10,13 +10,10 @@ interface UseGenerationProps {
   t: (key: string, params?: Record<string, string | number>) => string;
 }
 
-type WebsiteGenerationResult =
-  | { success: true; code: string }
-  | { success: false; error: string };
+type WebsiteGenerationResult = { success: true; code: string } | { success: false; error: string };
 
 type NewsletterGenerationResult =
-  | { success: true; newsletterText: string }
-  | { success: false; error: string };
+  { success: true; newsletterText: string } | { success: false; error: string };
 
 interface WebsiteGenerationOptions {
   onRetry?: (attempt: number, error: Error) => void;
@@ -75,8 +72,8 @@ export function useGeneration({ t }: UseGenerationProps) {
         logError('Website generation failed', errorMessage);
         return { success: false, error: errorMessage };
       }
-    }
-    ,[t]
+    },
+    [t]
   );
 
   const generateNewsletterContent = useCallback(

@@ -19,7 +19,9 @@ import {
 export const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(() => loadPrivacyPreference()?.mode || null);
+  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(
+    () => loadPrivacyPreference()?.mode || null
+  );
   const [userName, setUserName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -78,76 +80,93 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, []);
 
+  setLastPrompt(prompt);
+  setPageState('loading');
+  setError(null);
+  setGeneratedUrl('');
+  setNewsletter('');
+
+  const handleGenerateWrapper = useCallback(
+    async (options?: { modPrompt?: string }) => {
+      if (!healthStatus.ok) {
+        setError(healthStatus.message);
+        setPageState('form');
+        return;
+      }
+
+      const formData = sanitizeFormData({
+        userName,
+        businessName,
+        userEmail,
+        userPhone,
+        prompt,
+        services,
+        location,
+        themeColor,
+        selectedPalette,
+      });
+
       setLastPrompt(prompt);
       setPageState('loading');
       setError(null);
       setGeneratedUrl('');
       setNewsletter('');
 
-  const handleGenerateWrapper = useCallback(async (options?: { modPrompt?: string }) => {
-    if (!healthStatus.ok) {
-      setError(healthStatus.message);
-      setPageState('form');
-      return;
-    }
+      const result = await generateWebsiteContent(formData, options?.modPrompt, {
+        onRetry: (attempt, err) => {
+          setRetryCount(attempt);
+          setError(err.message);
+        },
+      });
 
-    const formData = sanitizeFormData({
-      userName,
-      businessName,
-      userEmail,
-      userPhone,
-      prompt,
-      services,
-      location,
-      themeColor,
-      selectedPalette,
-    });
-
-    setLastPrompt(prompt);
-    setPageState('loading');
-    setError(null);
-    setGeneratedUrl('');
-    setNewsletter('');
-
-    const result = await generateWebsiteContent(formData, options?.modPrompt, {
-      onRetry: (attempt, err) => {
-        setRetryCount(attempt);
-        setError(err.message);
-      },
-    });
-
-    if (result.success) {
-      if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
-        setGeneratedCode(result.code);
-        setPageState('result');
-        setRetryCount((prev) => prev + 1);
-      } else if (result.success) {
+      if (result.success) {
         if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
           setGeneratedCode(result.code);
           setPageState('result');
-          setGeneratedUrl(`data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`);
-          setRetryCount(0);
+          setRetryCount((prev) => prev + 1);
+        } else if (result.success) {
+          if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
+            setGeneratedCode(result.code);
+            setPageState('result');
+            setGeneratedUrl(`data:text/html;charset=utf-8,${encodeURIComponent(result.code)}`);
+            setRetryCount(0);
+          } else {
+            setError(t('updateFailed'));
+            setGeneratedCode(generatedCode || '');
+            setPageState('result');
+          }
         } else {
           setError(t('updateFailed'));
           setGeneratedCode(generatedCode || '');
           setPageState('result');
         }
       } else {
-        setError(t('updateFailed'));
+        setError(`Failed to generate website: ${result.error}`);
         setGeneratedCode(generatedCode || '');
         setPageState('result');
+        setRetryCount((prev) => prev + 1);
       }
-    } else {
-      setError(`Failed to generate website: ${result.error}`);
-      setGeneratedCode(generatedCode || '');
-      setPageState('result');
-      setRetryCount((prev) => prev + 1);
-    }
 
-    if (options?.modPrompt) {
-      setModificationPrompt('');
-    }
-  }, [healthStatus, prompt, userName, businessName, userEmail, userPhone, selectedPalette, services, location, themeColor, generatedCode, t, generateWebsiteContent]);
+      if (options?.modPrompt) {
+        setModificationPrompt('');
+      }
+    },
+    [
+      healthStatus,
+      prompt,
+      userName,
+      businessName,
+      userEmail,
+      userPhone,
+      selectedPalette,
+      services,
+      location,
+      themeColor,
+      generatedCode,
+      t,
+      generateWebsiteContent,
+    ]
+  );
 
   const handleGenerate = useCallback(() => handleGenerateWrapper(), [handleGenerateWrapper]);
 

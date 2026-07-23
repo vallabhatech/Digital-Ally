@@ -11,7 +11,7 @@ interface UseIntersectionObserverOptions {
  * Observes when an element enters the viewport using the Intersection Observer API.
  */
 export function useIntersectionObserver<T extends Element>(
-  options: UseIntersectionObserverOptions = {},
+  options: UseIntersectionObserverOptions = {}
 ): [RefObject<T | null>, boolean] {
   const { root = null, rootMargin = '200px', threshold = 0, triggerOnce = true } = options;
   const ref = useRef<T | null>(null);
@@ -35,7 +35,7 @@ export function useIntersectionObserver<T extends Element>(
           setIsIntersecting(false);
         }
       },
-      { root, rootMargin, threshold },
+      { root, rootMargin, threshold }
     );
 
     observer.observe(element);

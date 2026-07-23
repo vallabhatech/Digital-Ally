@@ -11,7 +11,7 @@ class MockSpeechRecognition {
   onresult = null as any;
   onerror = null as any;
   onend = null as any;
-  
+
   static lastInstance: MockSpeechRecognition | null = null;
 
   constructor() {
@@ -30,7 +30,7 @@ class MockSpeechSynthesisUtterance {
   onstart = null as any;
   onend = null as any;
   onerror = null as any;
-  
+
   static lastInstance: MockSpeechSynthesisUtterance | null = null;
 
   constructor(text?: string) {
@@ -41,9 +41,17 @@ class MockSpeechSynthesisUtterance {
 
 const mockSpeechSynthesis = {
   speaking: false,
-  getVoices: vi.fn().mockReturnValue([
-    { name: 'Google US English', lang: 'en-US', default: true, localService: true, voiceURI: 'Google US English' }
-  ]),
+  getVoices: vi
+    .fn()
+    .mockReturnValue([
+      {
+        name: 'Google US English',
+        lang: 'en-US',
+        default: true,
+        localService: true,
+        voiceURI: 'Google US English',
+      },
+    ]),
   speak: vi.fn((utterance: any) => {
     mockSpeechSynthesis.speaking = true;
     if (utterance.onstart) {

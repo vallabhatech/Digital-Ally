@@ -5,13 +5,7 @@ import { useSpeechToText } from '@/hooks/useSpeechToText';
 import { useFormValidation } from '@/hooks/useFormValidation';
 import { modificationSchema } from '@/shared/validation';
 import { ValidatedField } from '@/components/ValidatedField';
-import {
-  CheckIcon,
-  CopyIcon,
-  DownloadIcon,
-  EyeIcon,
-  CodeIcon,
-} from '@/components/IconSet';
+import { CheckIcon, CopyIcon, DownloadIcon, EyeIcon, CodeIcon } from '@/components/IconSet';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { PreviewTabs } from '@/components/ui/PreviewTabs';
@@ -173,34 +167,34 @@ export const OutputPanel: React.FC = () => {
       {/* Left Side - Preview */}
       <div className="flex-1 flex flex-col bg-gray-900 text-white">
         <div className="flex-shrink-0 bg-gray-800 p-2 flex flex-col gap-4 border-b border-gray-700 lg:flex-row lg:items-center lg:justify-between">
-        <PreviewTabs activeView={view} onChange={setView} />
-        {error && (
-          <p className="text-red-400 text-sm animate-pulse mx-auto lg:mx-0">
-            {t('updateFailed')}: {error}
-          </p>
-        )}
-        <div className="flex items-center gap-2 justify-center lg:justify-end">
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
-            aria-label="Copy Code"
-          >
-            {copied ? (
-              <CheckIcon className="w-5 h-5 text-green-400" />
-            ) : (
-              <CopyIcon className="w-5 h-5" />
-            )}
-            {copied ? t('copied') : t('copyCode')}
-          </button>
-          <button
-            onClick={handleDownload}
-            className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
-            aria-label="Download HTML"
-          >
-            <DownloadIcon className="w-5 h-5" /> {t('download')}
-          </button>
+          <PreviewTabs activeView={view} onChange={setView} />
+          {error && (
+            <p className="text-red-400 text-sm animate-pulse mx-auto lg:mx-0">
+              {t('updateFailed')}: {error}
+            </p>
+          )}
+          <div className="flex items-center gap-2 justify-center lg:justify-end">
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
+              aria-label="Copy Code"
+            >
+              {copied ? (
+                <CheckIcon className="w-5 h-5 text-green-400" />
+              ) : (
+                <CopyIcon className="w-5 h-5" />
+              )}
+              {copied ? t('copied') : t('copyCode')}
+            </button>
+            <button
+              onClick={handleDownload}
+              className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-gray-700 text-gray-300 hover:text-white transition-colors text-sm"
+              aria-label="Download HTML"
+            >
+              <DownloadIcon className="w-5 h-5" /> {t('download')}
+            </button>
+          </div>
         </div>
-      </div>
         {view === 'preview' ? (
           <>
             {hadUnsafeContent && (
@@ -226,7 +220,11 @@ export const OutputPanel: React.FC = () => {
 
       {/* Right Side - Controls */}
       <div className="w-full lg:w-1/3 xl:w-1/4 max-w-sm flex-shrink-0 bg-white p-6 overflow-y-auto border-r border-gray-200 h-full">
-        <SectionCard title="Modify & Export" subtitle="Make changes or download your website" className="mb-6">
+        <SectionCard
+          title="Modify & Export"
+          subtitle="Make changes or download your website"
+          className="mb-6"
+        >
           <ModificationForm
             value={modificationPrompt}
             onChange={setModificationPrompt}
@@ -250,9 +248,15 @@ export const OutputPanel: React.FC = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Marketing" subtitle="Generate a newsletter based on your website" className="mb-6">
+        <SectionCard
+          title="Marketing"
+          subtitle="Generate a newsletter based on your website"
+          className="mb-6"
+        >
           {healthStatus.checked && !healthStatus.ok && (
-            <p className="mb-3 text-sm text-red-600" role="alert">{healthStatus.message}</p>
+            <p className="mb-3 text-sm text-red-600" role="alert">
+              {healthStatus.message}
+            </p>
           )}
           <button
             onClick={handleGenerateNewsletter}

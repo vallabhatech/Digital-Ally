@@ -1,7 +1,9 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('Digital Ally E2E Website Generation Flow', () => {
-  test('should successfully go through the generation flow in local-only mode', async ({ page }) => {
+  test('should successfully go through the generation flow in local-only mode', async ({
+    page,
+  }) => {
     // 1. Visit page
     await page.goto('/');
 
@@ -21,12 +23,16 @@ test.describe('Digital Ally E2E Website Generation Flow', () => {
     await page.getByPlaceholder('Your Business Phone').fill('1234567890');
 
     // Step 2: Description field is now unlocked
-    const promptTextarea = page.getByPlaceholder('e.g., "We sell organic coffee and pastries. I want a modern and minimalist design."');
+    const promptTextarea = page.getByPlaceholder(
+      'e.g., "We sell organic coffee and pastries. I want a modern and minimalist design."'
+    );
     await expect(promptTextarea).toBeVisible();
     await promptTextarea.fill('Fresh organic pastries, bread, coffee and cookies.');
 
     // Step 3: Services field is now unlocked
-    const servicesTextarea = page.getByPlaceholder('e.g., Web design, digital marketing, consulting, coffee and pastries...');
+    const servicesTextarea = page.getByPlaceholder(
+      'e.g., Web design, digital marketing, consulting, coffee and pastries...'
+    );
     await expect(servicesTextarea).toBeVisible();
     await servicesTextarea.fill('Bread, Pastries, Coffee, Tea');
 

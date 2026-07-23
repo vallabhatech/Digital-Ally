@@ -1,4 +1,9 @@
-import { PROMPT_TEMPLATE, NEWSLETTER_PROMPT_TEMPLATE, DASHBOARD_ANALYSIS_PROMPT_TEMPLATE, LANGUAGES } from '@/shared/constants';
+import {
+  PROMPT_TEMPLATE,
+  NEWSLETTER_PROMPT_TEMPLATE,
+  DASHBOARD_ANALYSIS_PROMPT_TEMPLATE,
+  LANGUAGES,
+} from '@/shared/constants';
 import { CONSENT_VERSION, loadPrivacyPreference } from '@/shared/privacy';
 
 interface WebsiteParams {
@@ -66,7 +71,10 @@ async function wait(ms: number): Promise<void> {
   await new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-export async function checkGeminiHealth(options?: { retries?: number; delayMs?: number }): Promise<GeminiHealthStatus> {
+export async function checkGeminiHealth(options?: {
+  retries?: number;
+  delayMs?: number;
+}): Promise<GeminiHealthStatus> {
   const retries = options?.retries ?? 3;
   const delayMs = options?.delayMs ?? 1000;
 
@@ -84,7 +92,8 @@ export async function checkGeminiHealth(options?: { retries?: number; delayMs?: 
         };
       }
 
-      const message = payload?.gemini?.message || 'The server is not ready for generation requests.';
+      const message =
+        payload?.gemini?.message || 'The server is not ready for generation requests.';
       if (attempt < retries) {
         await wait(delayMs * attempt);
         continue;
@@ -176,13 +185,18 @@ async function callAiGateway(task: AiTask, body: Record<string, unknown>) {
   return data;
 }
 
-const escapeHtml = (value: string): string => value.replace(/[&<>'"]/g, (character) => ({
-  '&': '&amp;',
-  '<': '&lt;',
-  '>': '&gt;',
-  '"': '&quot;',
-  "'": '&#039;',
-}[character] || character));
+const escapeHtml = (value: string): string =>
+  value.replace(
+    /[&<>'"]/g,
+    (character) =>
+      ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#039;',
+      })[character] || character
+  );
 
 function localWebsite(params: WebsiteParams): string {
   const title = escapeHtml(params.businessName);
@@ -205,18 +219,33 @@ a{color:#166534}</style></head><body><main><section><p>Welcome to</p><h1>${title
 </section></main></body></html>`;
 }
 
-export async function generateWebsite(
-  { description, userName, businessName, userEmail, userPhone, paletteName, paletteDetails, modificationPrompt }: WebsiteParams
-): Promise<string> {
+export async function generateWebsite({
+  description,
+  userName,
+  businessName,
+  userEmail,
+  userPhone,
+  paletteName,
+  paletteDetails,
+  modificationPrompt,
+}: WebsiteParams): Promise<string> {
   if (loadPrivacyPreference()?.mode === 'local') {
-    return localWebsite({ description, userName, businessName, userEmail, userPhone, paletteName, paletteDetails, modificationPrompt });
+    return localWebsite({
+      description,
+      userName,
+      businessName,
+      userEmail,
+      userPhone,
+      paletteName,
+      paletteDetails,
+      modificationPrompt,
+    });
   }
   const modificationSection = modificationPrompt
     ? `\n**Modification Request:** "${modificationPrompt}"`
     : '';
 
-  const textPrompt = PROMPT_TEMPLATE
-    .replace('{USER_NAME}', userName)
+  const textPrompt = PROMPT_TEMPLATE.replace('{USER_NAME}', userName)
     .replace('{BUSINESS_NAME}', businessName)
     .replace('{USER_EMAIL}', userEmail)
     .replace('{USER_PHONE}', userPhone)
@@ -229,30 +258,32 @@ export async function generateWebsite(
   return cleanResponse(data.html || data.text || '');
 }
 
-export async function generateNewsletter(
-  { description, businessName }: NewsletterParams
-): Promise<string> {
+export async function generateNewsletter({
+  description,
+  businessName,
+}: NewsletterParams): Promise<string> {
   if (loadPrivacyPreference()?.mode === 'local') {
     return `${businessName}: Local newsletter draft\n\n${description}\n\nThank you for supporting our business.`;
   }
-  const finalPrompt = NEWSLETTER_PROMPT_TEMPLATE
-    .replace('{BUSINESS_NAME}', businessName)
-    .replace('{USER_INPUT}', description);
+  const finalPrompt = NEWSLETTER_PROMPT_TEMPLATE.replace('{BUSINESS_NAME}', businessName).replace(
+    '{USER_INPUT}',
+    description
+  );
 
   const data = await callAiGateway('newsletter', { prompt: finalPrompt });
   return cleanResponse(data.html || data.text || '');
 }
 
-export async function analyzeAndTranslateDashboard(
-  { dashboardData, language }: DashboardAnalysisParams
-): Promise<string> {
+export async function analyzeAndTranslateDashboard({
+  dashboardData,
+  language,
+}: DashboardAnalysisParams): Promise<string> {
   if (loadPrivacyPreference()?.mode === 'local') {
     const langDetails = LANGUAGES.find((l) => l.value === language) || LANGUAGES[0];
     return `Local summary (${langDetails.label}): Your dashboard data is available only in this browser. ${dashboardData.replace(/\s+/g, ' ').trim()}`;
   }
   const langDetails = LANGUAGES.find((l) => l.value === language) || LANGUAGES[0];
-  const finalPrompt = DASHBOARD_ANALYSIS_PROMPT_TEMPLATE
-    .replace('{DASHBOARD_DATA}', dashboardData)
+  const finalPrompt = DASHBOARD_ANALYSIS_PROMPT_TEMPLATE.replace('{DASHBOARD_DATA}', dashboardData)
     .replace('{LANGUAGE_NAME}', langDetails.label)
     .replace('{LANGUAGE_CODE}', langDetails.value);
 

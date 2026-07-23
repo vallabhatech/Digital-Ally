@@ -33,7 +33,7 @@ describe('useSpeechToText', () => {
 
   it('should start listening when toggleListening is called', () => {
     const { result } = renderHook(() => useSpeechToText({ onTranscript, lang: 'en-US' }));
-    
+
     act(() => {
       result.current.toggleListening();
     });
@@ -45,7 +45,7 @@ describe('useSpeechToText', () => {
 
   it('should stop listening when toggleListening is called again', () => {
     const { result } = renderHook(() => useSpeechToText({ onTranscript, lang: 'en-US' }));
-    
+
     act(() => {
       result.current.toggleListening();
     });
@@ -67,9 +67,9 @@ describe('useSpeechToText', () => {
         results: [
           {
             isFinal: true,
-            0: { transcript: 'hello world' }
-          }
-        ]
+            0: { transcript: 'hello world' },
+          },
+        ],
       };
       MockSpeechRecognition.lastInstance?.onresult(mockEvent as any);
     });
@@ -87,7 +87,7 @@ describe('useSpeechToText', () => {
 
     act(() => {
       const mockErrorEvent = {
-        error: 'network'
+        error: 'network',
       };
       MockSpeechRecognition.lastInstance?.onerror(mockErrorEvent as any);
     });

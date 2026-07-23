@@ -1,8 +1,4 @@
-import {
-  LAZY_IMAGE_CLASS,
-  LAZY_IMAGE_FALLBACK,
-  LAZY_IMAGE_STYLES,
-} from './constants';
+import { LAZY_IMAGE_CLASS, LAZY_IMAGE_FALLBACK, LAZY_IMAGE_STYLES } from './constants';
 
 /**
  * Enhance sanitized HTML so images use native lazy loading, async decoding,
@@ -16,7 +12,9 @@ export function enhanceHtmlImages(html: string): string {
 
     const classAttr = /class\s*=/i.test(attrs)
       ? attrs.replace(/class\s*=\s*(['"])(.*?)\1/i, (_m: string, q: string, classes: string) => {
-          const next = classes.includes(LAZY_IMAGE_CLASS) ? classes : `${classes} ${LAZY_IMAGE_CLASS}`.trim();
+          const next = classes.includes(LAZY_IMAGE_CLASS)
+            ? classes
+            : `${classes} ${LAZY_IMAGE_CLASS}`.trim();
           return `class=${q}${next}${q}`;
         })
       : `${attrs} class="${LAZY_IMAGE_CLASS}"`;
