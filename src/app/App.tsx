@@ -6,6 +6,7 @@ import { ResultPage } from '@/pages/ResultPage';
 import { DashboardPage } from '@/pages/DashboardPage';
 import { LoadingSpinner } from '@/components/LoadingSpinner';
 import { PrivacyModal } from '@/components/PrivacyModal';
+import { ScrollToTop } from '@/components/ScrollToTop';
 
 const AppContent: React.FC = () => {
   const context = useContext(AppContext);
@@ -27,6 +28,7 @@ const AppContent: React.FC = () => {
         {pageState === 'result' && <ResultPage />}
         {pageState === 'dashboard' && <DashboardPage />}
       </main>
+      <ScrollToTop />
       {!privacyMode && <PrivacyModal onChoose={setPrivacyMode} />}
     </div>
   );
