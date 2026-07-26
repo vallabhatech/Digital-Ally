@@ -1,0 +1,180 @@
+name: Manual PR Label Cleanup
+
+on:
+  workflow_dispatch:
+
+permissions:
+ contents: read
+ pull-requests: write
+
+jobs:
+  label-prs:
+    name: Label historical pull requests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Scan and label pull requests
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const repoLabels = new Set();
+            const repoLabelsByLowercase = new Map();
+
+            for await (const response of github.paginate.iterator(
+              github.rest.issues.listLabelsForRepo,
+              { owner, repo, per_page: 100 }
+            )) {
+              for (const label of response.data) {
+                repoLabels.add(label.name);
+                repoLabelsByLowercase.set(label.name.toLowerCase(), label.name);
+              }
+            }
+
+            const labelDefinitions = [
+              { name: 'bug', keywords: ['bug', 'fix', 'hotfix', 'crash', 'error', 'exception', 'broken', 'regression', 'fails', 'failure'] },
+              { name: 'enhancement', keywords: ['feature', 'enhancement', 'improve', 'proposal', 'implement', 'add support'] },
+              { name: 'documentation', keywords: ['docs', 'documentation', 'readme', 'guide', 'typo', 'spelling', 'wording'] },
+              { name: 'frontend', keywords: ['frontend', 'client', 'browser', 'react', 'component', 'html', 'css', 'vite'] },
+              { name: 'backend', keywords: ['backend', 'server', 'api', 'database', 'db', 'service', 'endpoint', 'controller', 'middleware'] },
+              { name: 'ui/ux', keywords: ['ui', 'ux', 'user interface', 'layout', 'design', 'style', 'visual', 'accessibility', 'a11y'] },
+              { name: 'testing', keywords: ['test', 'testing', 'unit test', 'integration', 'e2e', 'coverage', 'mock', 'vitest', 'jest'] },
+              { name: 'security', keywords: ['security', 'vulnerability', 'cve', 'xss', 'csrf', 'auth', 'authentication', 'authorization', 'exploit'] },
+              { name: 'performance', keywords: ['performance', 'slow', 'latency', 'optimize', 'optimization', 'throughput', 'memory', 'cpu', 'lag'] },
+              { name: 'dependencies', keywords: ['dependency', 'dependencies', 'npm', 'pnpm', 'yarn', 'package-lock', 'renovate', 'dependabot'] }
+            ];
+
+            const stats = {
+              prsScanned: 0,
+              unlabeledPRsFound: 0,
+              prsLabeled: 0,
+              prsSkipped: 0,
+              labelsApplied: {}
+            };
+
+            const applyLabelCount = (label) => {
+              stats.labelsApplied[label] = (stats.labelsApplied[label] || 0) + 1;
+            };
+
+            const normalizeText = (pr) =>
+              `${pr.title}\n${pr.body || ''}`.toLowerCase();
+
+            const detectLabels = (text) => {
+              const matched = [];
+
+              for (const definition of labelDefinitions) {
+                if (
+                  definition.keywords.some(keyword => text.includes(keyword)) &&
+                  repoLabels.has(definition.name)
+                ) {
+                  matched.push(definition.name);
+                }
+              }
+
+              if (matched.length === 0 && repoLabels.has('ELUSOC')) {
+                matched.push('ELUSOC');
+              }
+
+              return matched;
+            };
+
+            const dedupeLabelsCaseInsensitive = (labels) => {
+              const unique = [];
+              const seen = new Set();
+
+              for (const label of labels) {
+                const lower = label.toLowerCase();
+                if (seen.has(lower)) continue;
+                seen.add(lower);
+                unique.push(label);
+              }
+
+              return unique;
+            };
+
+            const pullRequests = [];
+
+            for await (const response of github.paginate.iterator(
+              github.rest.pulls.list,
+              {
+                owner,
+                repo,
+                state: 'all',
+                per_page: 100
+              }
+            )) {
+              pullRequests.push(...response.data);
+            }
+
+            for (const pr of pullRequests) {
+              stats.prsScanned++;
+
+              const issue = await github.rest.issues.get({
+                owner,
+                repo,
+                issue_number: pr.number
+              });
+
+              const existingLabels = issue.data.labels || [];
+
+              if (existingLabels.length === 0) {
+                stats.unlabeledPRsFound++;
+              }
+
+              const existingNames = existingLabels
+                .map(l => l.name)
+                .filter(Boolean);
+
+              const existingLower = new Set(
+                existingNames.map(l => l.toLowerCase())
+              );
+
+              const detectedLabels = detectLabels(normalizeText(pr));
+
+              const labelsToApply = dedupeLabelsCaseInsensitive(
+                detectedLabels
+                  .map(label => repoLabelsByLowercase.get(label.toLowerCase()) || label)
+                  .filter(label => !existingLower.has(label.toLowerCase()))
+              );
+
+              if (labelsToApply.length === 0) {
+                stats.prsSkipped++;
+                core.info(`No new labels needed for PR #${pr.number}`);
+                continue;
+              }
+
+              await github.rest.issues.addLabels({
+                owner,
+                repo,
+                issue_number: pr.number,
+                labels: labelsToApply
+              });
+
+              stats.prsLabeled++;
+
+              for (const label of labelsToApply) {
+                applyLabelCount(label);
+              }
+
+              core.info(`Updated PR #${pr.number}: ${labelsToApply.join(', ')}`);
+            }
+
+            core.info(`Total PRs scanned: ${stats.prsScanned}`);
+            core.info(`Unlabeled PRs found: ${stats.unlabeledPRsFound}`);
+            core.info(`PRs labeled: ${stats.prsLabeled}`);
+            core.info(`PRs skipped: ${stats.prsSkipped}`);
+
+            await core.summary
+              .addHeading('Manual PR Label Cleanup')
+              .addTable([
+                [{ data: 'Metric', header: true }, { data: 'Value', header: true }],
+                ['Total PRs scanned', String(stats.prsScanned)],
+                ['Unlabeled PRs found', String(stats.unlabeledPRsFound)],
+                ['PRs labeled', String(stats.prsLabeled)],
+                ['PRs skipped', String(stats.prsSkipped)]
+              ])
+              .addHeading('Labels Applied')
+              .addCodeBlock(JSON.stringify(stats.labelsApplied, null, 2), 'json')
+              .write();
