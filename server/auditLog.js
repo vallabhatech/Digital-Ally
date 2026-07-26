@@ -1,7 +1,8 @@
 import { randomUUID } from 'node:crypto';
+import { RingBuffer } from './ringBuffer.js';
 
 const MAX_AUDIT_ENTRIES = 2000;
-const auditLog = [];
+const auditLog = new RingBuffer(MAX_AUDIT_ENTRIES);
 
 /**
  * Record a privacy-safe audit event (metadata only — no prompt or response bodies).
@@ -14,16 +15,13 @@ export function recordAuditEvent(entry) {
   };
 
   auditLog.push(record);
-  if (auditLog.length > MAX_AUDIT_ENTRIES) {
-    auditLog.shift();
-  }
 
   console.log(JSON.stringify({ type: 'audit', ...record }));
   return record;
 }
 
 export function getAuditLog() {
-  return [...auditLog];
+  return auditLog.toArray();
 }
 
 export function queryAuditLog({ limit = 100, task, statusCode, since, until } = {}) {
