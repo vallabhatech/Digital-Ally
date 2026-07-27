@@ -90,7 +90,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     validationEmail: 'Please enter a valid email address.',
     validationPhone: 'Please enter a valid phone number (7–20 digits).',
     validationUrl: 'Please enter a valid URL starting with http:// or https://.',
-    validationPassword: 'Password must be at least 8 characters with uppercase, lowercase, and a number.',
+    validationPassword:
+      'Password must be at least 8 characters with uppercase, lowercase, and a number.',
     validationMinLength: 'Must be at least {min} characters.',
     validationMaxLength: 'Must be no more than {max} characters.',
     validationMinValue: 'Must be at least {min}.',
@@ -190,8 +191,10 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     validationRequired: 'ఈ ఫీల్డ్ అవసరం.',
     validationEmail: 'దయచేసి చెల్లుబాటు అయ్యే ఇమెయిల్ చిరునామా నమోదు చేయండి.',
     validationPhone: 'దయచేసి చెల్లుబాటు అయ్యే ఫోన్ నంబర్ నమోదు చేయండి (7–20 అంకెలు).',
-    validationUrl: 'దయచేసి http:// లేదా https:// తో ప్రారంభమయ్యే చెల్లుబాటు అయ్యే URL నమోదు చేయండి.',
-    validationPassword: 'పాస్‌వర్డ్ కనీసం 8 అక్షరాలు, పెద్ద అక్షరం, చిన్న అక్షరం మరియు సంఖ్య ఉండాలి.',
+    validationUrl:
+      'దయచేసి http:// లేదా https:// తో ప్రారంభమయ్యే చెల్లుబాటు అయ్యే URL నమోదు చేయండి.',
+    validationPassword:
+      'పాస్‌వర్డ్ కనీసం 8 అక్షరాలు, పెద్ద అక్షరం, చిన్న అక్షరం మరియు సంఖ్య ఉండాలి.',
     validationMinLength: 'కనీసం {min} అక్షరాలు ఉండాలి.',
     validationMaxLength: 'గరిష్టంగా {max} అక్షరాలు మాత్రమే.',
     validationMinValue: 'కనీసం {min} ఉండాలి.',
@@ -294,7 +297,8 @@ export const TRANSLATIONS: { [key: string]: { [key: string]: string } } = {
     validationEmail: 'कृपया एक मान्य ईमेल पता दर्ज करें।',
     validationPhone: 'कृपया एक मान्य फ़ोन नंबर दर्ज करें (7–20 अंक)।',
     validationUrl: 'कृपया http:// या https:// से शुरू होने वाला मान्य URL दर्ज करें।',
-    validationPassword: 'पासवर्ड कम से कम 8 अक्षरों का होना चाहिए, जिसमें बड़े अक्षर, छोटे अक्षर और एक संख्या शामिल हो।',
+    validationPassword:
+      'पासवर्ड कम से कम 8 अक्षरों का होना चाहिए, जिसमें बड़े अक्षर, छोटे अक्षर और एक संख्या शामिल हो।',
     validationMinLength: 'कम से कम {min} अक्षर होने चाहिए।',
     validationMaxLength: 'अधिकतम {max} अक्षर होने चाहिए।',
     validationMinValue: 'कम से कम {min} होना चाहिए।',

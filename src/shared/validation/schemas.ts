@@ -95,9 +95,7 @@ export const websiteFormSchema = z.object({
     .max(FIELD_LIMITS.location.max, VALIDATION_ERROR_KEYS.maxLength)
     .optional()
     .or(z.literal('')),
-  themeColor: z
-    .string()
-    .regex(HEX_COLOR_REGEX, VALIDATION_ERROR_KEYS.hexColor),
+  themeColor: z.string().regex(HEX_COLOR_REGEX, VALIDATION_ERROR_KEYS.hexColor),
   selectedPalette: z
     .string()
     .min(1, VALIDATION_ERROR_KEYS.required)

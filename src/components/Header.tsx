@@ -54,7 +54,10 @@ export const Header: React.FC = () => {
         {/* Left Section: Brand & Examples */}
         <div className="flex items-center gap-4 md:gap-8">
           <button
-            onClick={() => { setPageState('form'); setIsMenuOpen(false); }}
+            onClick={() => {
+              setPageState('form');
+              setIsMenuOpen(false);
+            }}
             className="flex items-center gap-3 focus:outline-none"
           >
             <DigitalAllyLogoIcon className="w-8 h-8" />
@@ -107,9 +110,19 @@ export const Header: React.FC = () => {
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             {isMenuOpen ? (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M6 18L18 6M6 6l12 12"
+              />
             ) : (
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 6h16M4 12h16M4 18h16"
+              />
             )}
           </svg>
         </button>
@@ -117,7 +130,9 @@ export const Header: React.FC = () => {
         {/* Desktop Navigation Links */}
         <div className="hidden md:flex items-center gap-6 text-gray-600 font-medium">
           <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <span className={privacyMode === 'local' ? 'text-green-700 font-semibold' : 'text-gray-500'}>
+            <span
+              className={privacyMode === 'local' ? 'text-green-700 font-semibold' : 'text-gray-500'}
+            >
               Privacy
             </span>
             <select
@@ -162,7 +177,7 @@ export const Header: React.FC = () => {
                 <option key={lang.value} value={lang.value}>
                   {lang.label}
                 </option>
-            ))}
+              ))}
             </select>
           </div>
         </div>
@@ -172,7 +187,9 @@ export const Header: React.FC = () => {
       {isMenuOpen && (
         <div className="md:hidden bg-white px-4 pt-2 pb-6 border-b border-gray-200 flex flex-col gap-4 text-gray-600 font-medium absolute left-0 right-0 shadow-lg z-10 animate-fade-in">
           <label className="flex items-center justify-between border-b border-gray-100 pb-2 text-sm">
-            <span className={privacyMode === 'local' ? 'text-green-700 font-semibold' : 'text-gray-500'}>
+            <span
+              className={privacyMode === 'local' ? 'text-green-700 font-semibold' : 'text-gray-500'}
+            >
               Privacy Mode
             </span>
             <select
@@ -191,23 +208,32 @@ export const Header: React.FC = () => {
               <option value="local">Local only</option>
             </select>
           </label>
-          
+
           <button
-            onClick={() => { clearPrivateData(); setIsMenuOpen(false); }}
+            onClick={() => {
+              clearPrivateData();
+              setIsMenuOpen(false);
+            }}
             className="text-sm text-left text-red-600 py-1 border-b border-gray-100"
           >
             Delete my data
           </button>
-          
-          <button 
-            onClick={() => { setPageState('form'); setIsMenuOpen(false); }} 
+
+          <button
+            onClick={() => {
+              setPageState('form');
+              setIsMenuOpen(false);
+            }}
             className={`${getLinkClasses('form')} border-b border-gray-100 pb-2`}
           >
             {t('generator')}
           </button>
-          
-          <button 
-            onClick={() => { setPageState('dashboard'); setIsMenuOpen(false); }} 
+
+          <button
+            onClick={() => {
+              setPageState('dashboard');
+              setIsMenuOpen(false);
+            }}
             className={`${getLinkClasses('dashboard')} border-b border-gray-100 pb-2`}
           >
             {t('dashboard')}
@@ -220,7 +246,10 @@ export const Header: React.FC = () => {
             </div>
             <select
               value={language}
-              onChange={(e) => { setLanguage(e.target.value); setIsMenuOpen(false); }}
+              onChange={(e) => {
+                setLanguage(e.target.value);
+                setIsMenuOpen(false);
+              }}
               className="border border-gray-300 rounded-md px-2 py-1 text-sm text-gray-600 bg-white"
             >
               {LANGUAGES.map((lang) => (

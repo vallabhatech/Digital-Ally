@@ -1,6 +1,6 @@
 import React, { useState, useCallback, createContext, useEffect } from 'react';
 import { useGeneration } from '@/hooks/useGeneration';
-import { checkGeminiHealth, GeminiHealthStatus } from '@/services/geminiService';
+import { checkGeminiHealth, GeminiHealthStatus } from '@/features/generation/geminiService';
 import { LANGUAGES, TRANSLATIONS, COLOR_PALETTES } from '@/shared/constants';
 import { AppContextType } from '@/shared/types';
 import {
@@ -19,7 +19,9 @@ import {
 export const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(() => loadPrivacyPreference()?.mode || null);
+  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(
+    () => loadPrivacyPreference()?.mode || null
+  );
   const [userName, setUserName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -65,7 +67,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let active = true;
 
     const validateHealth = async () => {
-      const result = await checkGeminiHealth({ retries: 3, delayMs: 1000 });
+      if (privacyMode === 'local') {
+        if (active) {
+          setHealthStatus({
+            ok: true,
+            checked: true,
+            retrying: false,
+            message: 'Local generation mode active.',
+          });
+        }
+        return;
+      }
+      const result = await checkGeminiHealth({ retries: 2, delayMs: 500 });
       if (active) {
         setHealthStatus(result);
       }
@@ -76,7 +89,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       active = false;
     };
-  }, []);
+  }, [privacyMode]);
+
+  const handleGenerateWrapper = useCallback(
+    async (options?: { modPrompt?: string }) => {
+      if (!healthStatus.ok) {
+        setError(healthStatus.message);
+        setPageState('form');
+        return;
+      }
+
+      const formData = sanitizeFormData({
+        userName,
+        businessName,
+        userEmail,
+        userPhone,
+        prompt,
+        services,
+        location,
+        themeColor,
+        selectedPalette,
+      });
 
       setLastPrompt(prompt);
       setPageState('loading');
@@ -84,44 +117,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setGeneratedUrl('');
       setNewsletter('');
 
-  const handleGenerateWrapper = useCallback(async (options?: { modPrompt?: string }) => {
-    if (!healthStatus.ok) {
-      setError(healthStatus.message);
-      setPageState('form');
-      return;
-    }
+      const result = await generateWebsiteContent(formData, options?.modPrompt, {
+        onRetry: (attempt, err) => {
+          setRetryCount(attempt);
+          setError(err.message);
+        },
+      });
 
-    const formData = sanitizeFormData({
-      userName,
-      businessName,
-      userEmail,
-      userPhone,
-      prompt,
-      services,
-      location,
-      themeColor,
-      selectedPalette,
-    });
-
-    setLastPrompt(prompt);
-    setPageState('loading');
-    setError(null);
-    setGeneratedUrl('');
-    setNewsletter('');
-
-    const result = await generateWebsiteContent(formData, options?.modPrompt, {
-      onRetry: (attempt, err) => {
-        setRetryCount(attempt);
-        setError(err.message);
-      },
-    });
-
-    if (result.success) {
-      if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
-        setGeneratedCode(result.code);
-        setPageState('result');
-        setRetryCount((prev) => prev + 1);
-      } else if (result.success) {
+      if (result.success === true) {
         if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
           setGeneratedCode(result.code);
           setPageState('result');
@@ -133,21 +136,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           setPageState('result');
         }
       } else {
-        setError(t('updateFailed'));
+        setError(`Failed to generate website: ${result.error}`);
         setGeneratedCode(generatedCode || '');
         setPageState('result');
+        setRetryCount((prev) => prev + 1);
       }
-    } else {
-      setError(`Failed to generate website: ${result.error}`);
-      setGeneratedCode(generatedCode || '');
-      setPageState('result');
-      setRetryCount((prev) => prev + 1);
-    }
 
-    if (options?.modPrompt) {
-      setModificationPrompt('');
-    }
-  }, [healthStatus, prompt, userName, businessName, userEmail, userPhone, selectedPalette, services, location, themeColor, generatedCode, t, generateWebsiteContent]);
+      if (options?.modPrompt) {
+        setModificationPrompt('');
+      }
+    },
+    [
+      healthStatus,
+      prompt,
+      userName,
+      businessName,
+      userEmail,
+      userPhone,
+      selectedPalette,
+      services,
+      location,
+      themeColor,
+      generatedCode,
+      t,
+      generateWebsiteContent,
+    ]
+  );
 
   const handleGenerate = useCallback(() => handleGenerateWrapper(), [handleGenerateWrapper]);
 
@@ -188,7 +202,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     try {
       const result = await generateNewsletterContent({ prompt, businessName });
-      if (result.success) {
+      if (result.success === true) {
         setNewsletter(result.newsletterText);
       } else {
         setError(`Failed to generate newsletter: ${result.error}`);
@@ -246,6 +260,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearPrivacyPreference();
     setPrivacyModeState(null);
   }, [reset]);
+
+  const setPrivacyMode = useCallback((mode: AiProcessingMode) => {
+    savePrivacyPreference(mode);
+    setPrivacyModeState(mode);
+  }, []);
 
   const reviewPrivacyChoice = useCallback(() => {
     clearPrivacyPreference();

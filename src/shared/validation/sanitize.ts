@@ -1,5 +1,6 @@
 /** Strip non-printable control characters from user input. */
 export function stripControlChars(value: string): string {
+  // eslint-disable-next-line no-control-regex
   return value.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
 }
 

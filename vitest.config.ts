@@ -3,13 +3,24 @@ import path from 'path';
 
 export default defineConfig({
   resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
+    alias: [
+      { find: '@', replacement: path.resolve(__dirname, './src').replace(/\\/g, '/') },
+      {
+        find: '@google/genai',
+        replacement: path
+          .resolve(__dirname, './node_modules/@google/genai/dist/node/index.cjs')
+          .replace(/\\/g, '/'),
+      },
+    ],
   },
   test: {
     globals: true,
     environment: 'jsdom',
+    server: {
+      deps: {
+        inline: ['@google/genai'],
+      },
+    },
     setupFiles: ['./src/test/setup.ts'],
     include: ['src/**/*.test.ts', 'src/**/*.test.tsx', 'server/**/*.test.js'],
     exclude: ['**/node_modules/**', '**/dist/**', '**/e2e/**'],

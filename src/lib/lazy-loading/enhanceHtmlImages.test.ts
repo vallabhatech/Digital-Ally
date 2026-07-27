@@ -3,7 +3,8 @@ import { enhanceHtmlImages, LAZY_IMAGE_CLASS, LAZY_IMAGE_FALLBACK } from './enha
 
 describe('enhanceHtmlImages', () => {
   it('adds lazy loading attributes to img tags', () => {
-    const html = '<html><head></head><body><img src="https://example.com/a.jpg" alt="Hero"></body></html>';
+    const html =
+      '<html><head></head><body><img src="https://example.com/a.jpg" alt="Hero"></body></html>';
     const result = enhanceHtmlImages(html);
 
     expect(result).toContain('loading="lazy"');

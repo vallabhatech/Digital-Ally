@@ -8,6 +8,9 @@ import { generateWebsite } from '@/features/generation/geminiService';
 vi.mock('@/features/generation/geminiService', () => ({
   generateWebsite: vi.fn(),
   generateNewsletter: vi.fn(),
+  checkGeminiHealth: vi
+    .fn()
+    .mockResolvedValue({ ok: true, checked: true, retrying: false, message: '' }),
 }));
 
 const TestComponent: React.FC = () => {
@@ -25,29 +28,51 @@ const TestComponent: React.FC = () => {
       <div data-testid="generatedUrl">{context.generatedUrl || 'none'}</div>
       <div data-testid="translatedText">{context.t('headline1')}</div>
       <div data-testid="translatedFailed">{context.t('updateFailed')}</div>
-      
-      <button onClick={() => context.setPrivacyMode('local')} data-testid="setPrivacyLocal">Set Privacy Local</button>
-      <button onClick={() => {
-        context.setUserName('Alice');
-        context.setBusinessName('Alice Bakery');
-        context.setUserEmail('alice@bakery.com');
-        context.setUserPhone('123456');
-        context.setPrompt('Best bakery in town');
-        context.setSelectedPalette('Lime Fresh');
-      }} data-testid="fillForm">Fill Form</button>
-      <button onClick={context.handleGenerate} data-testid="generate">Generate</button>
-      <button onClick={context.reset} data-testid="reset">Reset</button>
+
+      <button onClick={() => context.setPrivacyMode('local')} data-testid="setPrivacyLocal">
+        Set Privacy Local
+      </button>
+      <button
+        onClick={() => {
+          context.setUserName('Alice');
+          context.setBusinessName('Alice Bakery');
+          context.setUserEmail('alice@bakery.com');
+          context.setUserPhone('1234567890');
+          context.setServices('Fresh bakery goods and cakes');
+          context.setPrompt('Best bakery in town');
+          context.setSelectedPalette('Modern');
+        }}
+        data-testid="fillForm"
+      >
+        Fill Form
+      </button>
+      <button onClick={context.handleGenerate} data-testid="generate">
+        Generate
+      </button>
+      <button onClick={context.reset} data-testid="reset">
+        Reset
+      </button>
       <input
         type="text"
         value={context.modificationPrompt}
         onChange={(e) => context.setModificationPrompt(e.target.value)}
         data-testid="modInput"
       />
-      <button onClick={context.handleAssist} data-testid="assist">Assist</button>
-      <button onClick={context.handleGenerateNewsletter} data-testid="newsletter">Newsletter</button>
-      <button onClick={context.handleRetry} data-testid="retry">Retry</button>
-      <button onClick={context.reviewPrivacyChoice} data-testid="reviewPrivacy">Review Privacy</button>
-      <button onClick={context.clearPrivateData} data-testid="clearPrivate">Clear Private</button>
+      <button onClick={context.handleAssist} data-testid="assist">
+        Assist
+      </button>
+      <button onClick={context.handleGenerateNewsletter} data-testid="newsletter">
+        Newsletter
+      </button>
+      <button onClick={context.handleRetry} data-testid="retry">
+        Retry
+      </button>
+      <button onClick={context.reviewPrivacyChoice} data-testid="reviewPrivacy">
+        Review Privacy
+      </button>
+      <button onClick={context.clearPrivateData} data-testid="clearPrivate">
+        Clear Private
+      </button>
     </div>
   );
 };
@@ -80,7 +105,7 @@ describe('AppContext', () => {
 
     fireEvent.click(screen.getByTestId('setPrivacyLocal'));
     expect(screen.getByTestId('privacyMode').textContent).toBe('local');
-    
+
     // Check localStorage
     const saved = localStorage.getItem('digital-ally-privacy-preference');
     expect(saved).toContain('local');
@@ -95,7 +120,9 @@ describe('AppContext', () => {
 
     // By default it's English
     expect(screen.getByTestId('translatedText').textContent).not.toBe('headline1');
-    expect(screen.getByTestId('translatedText').textContent).toContain('Build Your Website in Minutes.');
+    expect(screen.getByTestId('translatedText').textContent).toContain(
+      'Build Your Website in Minutes.'
+    );
   });
 
   it('should prevent generation if form is incomplete', async () => {
@@ -106,20 +133,26 @@ describe('AppContext', () => {
     );
 
     fireEvent.click(screen.getByTestId('generate'));
-    
+
     // Should display validation error
     expect(screen.getByTestId('error').textContent).not.toBe('none');
     expect(screen.getByTestId('pageState').textContent).toBe('form');
   });
 
   it('should execute website generation when form is completed in remote mode', async () => {
-    vi.mocked(generateWebsite).mockResolvedValue('<!doctype html><html><body>Alice Bakery</body></html>');
+    vi.mocked(generateWebsite).mockResolvedValue(
+      '<!doctype html><html><body>Alice Bakery</body></html>'
+    );
 
     render(
       <AppProvider>
         <TestComponent />
       </AppProvider>
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error').textContent).toBe('none');
+    });
 
     fireEvent.click(screen.getByTestId('fillForm'));
     fireEvent.click(screen.getByTestId('generate'));
@@ -148,13 +181,19 @@ describe('AppContext', () => {
   });
 
   it('should support assistant, newsletter, retry and privacy calls', async () => {
-    vi.mocked(generateWebsite).mockResolvedValue('<!doctype html><html><body>Alice Bakery</body></html>');
+    vi.mocked(generateWebsite).mockResolvedValue(
+      '<!doctype html><html><body>Alice Bakery</body></html>'
+    );
 
     render(
       <AppProvider>
         <TestComponent />
       </AppProvider>
     );
+
+    await waitFor(() => {
+      expect(screen.getByTestId('error').textContent).toBe('none');
+    });
 
     fireEvent.click(screen.getByTestId('fillForm'));
     fireEvent.click(screen.getByTestId('generate'));
@@ -172,7 +211,7 @@ describe('AppContext', () => {
 
     // Test newsletter generation
     fireEvent.click(screen.getByTestId('newsletter'));
-    
+
     // Test retry limits
     fireEvent.click(screen.getByTestId('retry'));
 
