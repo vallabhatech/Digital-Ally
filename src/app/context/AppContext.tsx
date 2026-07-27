@@ -1,8 +1,15 @@
 import React, { useState, useCallback, createContext, useEffect } from 'react';
 import { useGeneration } from '@/hooks/useGeneration';
 import { checkGeminiHealth, GeminiHealthStatus } from '@/features/generation/geminiService';
+import { GeminiHealthStatus } from '@/services/geminiService';
 import { LANGUAGES, TRANSLATIONS, COLOR_PALETTES } from '@/shared/constants';
 import { AppContextType } from '@/shared/types';
+import {
+  AiProcessingMode,
+  clearPrivacyPreference,
+  loadPrivacyPreference,
+  savePrivacyPreference,
+} from '@/shared/privacy';
 import {
   AiProcessingMode,
   clearPrivacyPreference,
@@ -110,6 +117,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         themeColor,
         selectedPalette,
       });
+  const setPrivacyMode = useCallback((mode: AiProcessingMode) => {
+    savePrivacyPreference(mode);
+    setPrivacyModeState(mode);
+    setError(null);
+  }, []);
+
+  const handleGenerateWrapper = useCallback(
+    async (options?: { modPrompt?: string }) => {
+      const formData = sanitizeFormData({
+        userName,
+        businessName,
+        userEmail,
+        userPhone,
+        prompt,
+        services,
+        location,
+        themeColor,
+        selectedPalette,
+      });
 
       setLastPrompt(prompt);
       setPageState('loading');
@@ -125,6 +151,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       });
 
       if (result.success === true) {
+      if (result.success) {
         if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
           setGeneratedCode(result.code);
           setPageState('result');
@@ -181,11 +208,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [modificationPrompt, handleGenerateWrapper, t]);
 
   const handleGenerateNewsletter = useCallback(async () => {
-    if (!healthStatus.ok) {
-      setError(healthStatus.message);
-      return;
-    }
-
     const validation = validateSchema(
       newsletterFormSchema,
       sanitizeFormData({ prompt, businessName, generatedUrl }),
@@ -211,8 +233,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setError(error instanceof Error ? error.message : 'An unknown error occurred.');
     } finally {
       setIsGeneratingPost(false);
+    const result = await generateNewsletterContent({ prompt, businessName });
+    if (result.success) {
+      setNewsletter(result.newsletterText);
+    } else {
+      setError(`Failed to generate newsletter: ${result.error}`);
     }
-  }, [healthStatus, prompt, businessName, generatedUrl, t, generateNewsletterContent]);
+    setIsGeneratingPost(false);
+  }, [prompt, businessName, generatedUrl, t, generateNewsletterContent]);
 
   const handleSelectExample = useCallback((examplePrompt: string) => {
     setPrompt(examplePrompt);

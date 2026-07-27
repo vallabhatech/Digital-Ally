@@ -417,12 +417,12 @@ The user provides their personal and business details, a business description (i
         *   Email: **{USER_EMAIL}** (make it a \`mailto:\` link)
         *   Phone: **{USER_PHONE}** (make it a \`tel:\` link)
 
-4.  **Styling with Tailwind CSS (MANDATORY):**
-    *   You **MUST** use Tailwind CSS for all styling via the CDN script: \`<script src="https://cdn.tailwindcss.com"></script>\`.
-    *   **Strictly follow the user's chosen color palette.** Use the provided guidelines ({PALETTE_DETAILS}) to apply Tailwind color classes. For example, if the primary color is 'bg-indigo-600', use that class for buttons and key elements.
-    *   Apply classes directly to HTML elements. **DO NOT** use a '<style>' block.
+4.  **Styling (MANDATORY):**
+    *   The generated HTML must be self-contained: include all required CSS rules in a \`<style>\` block in the \`<head>\`. Do not rely on external CDNs, \`<script>\` tags, or a Tailwind build/runtime step for styling.
+    *   Use plain CSS rules in the embedded \`<style>\` block. You may apply utility-like class names to HTML elements, but every class used must be defined in the same embedded \`<style>\` block.
+    *   **Strictly follow the user's chosen color palette.** Use the provided guidelines ({PALETTE_DETAILS}) to apply colors in the embedded CSS.
     *   Ensure the layout is modern, clean, mobile-first, and fully responsive.
-    *   Interactive elements (buttons, links) MUST have hover and focus states (e.g., \`hover:bg-indigo-700\`).
+    *   Interactive elements (buttons, links) MUST have hover and focus states.
 
 5.  **Structure & Images:**
     *   The entire website must be a single HTML file.
