@@ -63,10 +63,7 @@ export function useFormValidation<T extends z.ZodRawShape>({
     setSubmitted(false);
   }, []);
 
-  const isFieldValid = useCallback(
-    (field: string) => Boolean(validFields[field]),
-    [validFields],
-  );
+  const isFieldValid = useCallback((field: string) => Boolean(validFields[field]), [validFields]);
 
   const hasErrors = Object.keys(errors).length > 0;
 

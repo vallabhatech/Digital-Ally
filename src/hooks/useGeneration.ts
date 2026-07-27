@@ -1,5 +1,5 @@
 import { useCallback } from 'react';
-import { generateWebsite, generateNewsletter } from '@/services/geminiService';
+import { generateWebsite, generateNewsletter } from '@/features/generation/geminiService';
 import { COLOR_PALETTES } from '@/shared/constants';
 import { sanitizeFormData, validateSchema } from '@/shared/validation';
 import { websiteFormSchema, newsletterFormSchema } from '@/shared/validation';
@@ -37,7 +37,7 @@ export function useGeneration({ t }: UseGenerationProps) {
     ): Promise<WebsiteGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(websiteFormSchema, sanitized, t);
-      if (!validation.success) {
+      if (validation.success === false) {
         return { success: false, error: validation.firstError };
       }
 
@@ -72,15 +72,15 @@ export function useGeneration({ t }: UseGenerationProps) {
         logError('Website generation failed', errorMessage);
         return { success: false, error: errorMessage };
       }
-    }
-    ,[t]
+    },
+    [t]
   );
 
   const generateNewsletterContent = useCallback(
     async (formState: Record<string, string>): Promise<NewsletterGenerationResult> => {
       const sanitized = sanitizeFormData(formState);
       const validation = validateSchema(newsletterFormSchema, sanitized, t);
-      if (!validation.success) {
+      if (validation.success === false) {
         return { success: false, error: validation.firstError };
       }
 

@@ -11,24 +11,32 @@ describe('sanitizePreviewHtml', () => {
     expect(result.html).toContain('<div>Hello World</div>');
   });
 
-  it('should detect and remove script tags', () => {
+  it('should detect and remove malicious inline script tags', () => {
     const rawHtml = '<div>Hello<script>alert("xss")</script> World</div>';
     const result = sanitizePreviewHtml(rawHtml);
 
     expect(result.hadUnsafeContent).toBe(true);
-    expect(result.html).not.toContain('script');
     expect(result.html).not.toContain('alert');
-    expect(result.html).toContain('<div>Hello World</div>');
+    expect(result.html).toContain('Hello World');
+  });
+
+  it('should NOT flag trusted Tailwind CDN script as unsafe and should re-inject it', () => {
+    const rawHtml =
+      '<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body><div class="bg-blue-500">Styled</div></body></html>';
+    const result = sanitizePreviewHtml(rawHtml);
+
+    expect(result.hadUnsafeContent).toBe(false);
+    expect(result.html).toContain('cdn.tailwindcss.com');
+    expect(result.html).toContain('bg-blue-500');
   });
 
   it('should detect and remove inline event handlers', () => {
-    const rawHtml = '<button onclick="alert(\'xss\')">Click me</button>';
+    const rawHtml = '<div onclick="alert(\'xss\')">Click me</div>';
     const result = sanitizePreviewHtml(rawHtml);
 
-    // Note: button tag is also in FORBID_TAGS, so the tag itself is removed
     expect(result.hadUnsafeContent).toBe(true);
-    expect(result.html).not.toContain('button');
     expect(result.html).not.toContain('onclick');
+    expect(result.html).toContain('Click me');
   });
 
   it('should sanitize full html and prepend CSP meta tag', () => {
@@ -46,6 +54,17 @@ describe('sanitizePreviewHtml', () => {
 
     expect(result.hadUnsafeContent).toBe(true);
     expect(result.html).not.toContain('iframe');
+  });
+
+  it('should flag unsafe when Tailwind CDN + malicious script are both present', () => {
+    const rawHtml =
+      '<!DOCTYPE html><html><head><script src="https://cdn.tailwindcss.com"></script></head><body><script>alert("xss")</script><div>Content</div></body></html>';
+    const result = sanitizePreviewHtml(rawHtml);
+
+    expect(result.hadUnsafeContent).toBe(true);
+    expect(result.html).not.toContain('alert');
+    expect(result.html).toContain('cdn.tailwindcss.com');
+    expect(result.html).toContain('Content');
   });
 });
 

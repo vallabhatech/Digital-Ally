@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const generateContentMock = vi.fn();
 
-vi.mock('@google/genai', () => {
+vi.mock('./genaiClient.js', () => {
   class MockGoogleGenAI {
     constructor() {
       this.models = {
@@ -74,7 +74,15 @@ vi.mock('./logger.js', () => ({
 }));
 
 vi.mock('./logQuery.js', () => ({
-  queryRequestLogs: vi.fn(() => ({ entries: [], total: 0, returned: 0, limit: 100, pagination: {}, filters: {}, sort: {} })),
+  queryRequestLogs: vi.fn(() => ({
+    entries: [],
+    total: 0,
+    returned: 0,
+    limit: 100,
+    pagination: {},
+    filters: {},
+    sort: {},
+  })),
 }));
 
 vi.mock('./auditLog.js', () => ({

@@ -20,7 +20,11 @@ export const PaletteSelector: React.FC<PaletteSelectorProps> = ({
         {error}
       </p>
     )}
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-4" role="radiogroup" aria-label="Color Palette">
+    <div
+      className="grid grid-cols-2 md:grid-cols-4 gap-4"
+      role="radiogroup"
+      aria-label="Color Palette"
+    >
       {COLOR_PALETTES.map((palette) => (
         <button
           key={palette.name}

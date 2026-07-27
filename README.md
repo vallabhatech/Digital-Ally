@@ -255,6 +255,46 @@ or stop the process using the port.
 
 ---
 
+## 🛡️ Error Handling Architecture
+
+Digital Ally employs an enterprise custom error hierarchy across both backend and frontend environments for structured telemetry and consistent API contracts.
+
+### Server Error Classes (`server/errors/appErrors.js`)
+- `ApplicationError`: Base class for operational errors (`isOperational: true`).
+- `ValidationError` (400): Input or request schema validation failure.
+- `UnauthorizedError` (401): Missing or invalid client authentication token.
+- `ForbiddenError` (403): Access denied or invalid administrative token.
+- `NotFoundError` (404): Requested API endpoint or resource not found.
+- `ConsentRequiredError` (428): Outdated AI processing consent version.
+- `RateLimitError` (429): Per-client rate limit exceeded.
+- `QuotaExceededError` (429): Daily or monthly quota limit reached.
+- `ExternalServiceError` (503): Downstream Gemini API or connection failure.
+- `InternalServerError` (500): Unexpected system or code error.
+
+### Express Centralized Error Middleware (`server/middleware/errorHandler.js`)
+All route errors are passed via `next(err)` to the central error middleware, standardizing API responses:
+```json
+{
+  "data": null,
+  "meta": null,
+  "error": {
+    "code": "QUOTA_EXCEEDED",
+    "message": "Quota limit exceeded",
+    "details": { "retryAfter": 86400 }
+  }
+}
+```
+
+### Client Error Classes (`src/shared/errors/appErrors.ts`)
+- `AppError`: Base class for client-side errors.
+- `ApiError`: Holds HTTP status code and API code.
+- `AuthAppError`: Authentication/token failures.
+- `QuotaAppError`: Client-side rate/quota limit handling.
+- `ValidationAppError`: Form validation errors.
+- `NetworkAppError`: Connectivity or network failures.
+
+---
+
 ## 🚧 Known Limitations
 
 - Requires a valid Gemini API key.

@@ -4,7 +4,10 @@ import { FIELD_LIMITS, VALIDATION_ERROR_KEYS } from './schemas';
 type TranslateFn = (key: string, params?: Record<string, string | number>) => string;
 
 /** Map a Zod issue to a user-facing translation key with optional params. */
-export function getIssueTranslationKey(issue: z.ZodIssue): { key: string; params?: Record<string, string | number> } {
+export function getIssueTranslationKey(issue: z.ZodIssue): {
+  key: string;
+  params?: Record<string, string | number>;
+} {
   const field = issue.path[0] as string;
   const limits = FIELD_LIMITS[field as keyof typeof FIELD_LIMITS];
 
@@ -49,7 +52,7 @@ export type ValidationResult<T> =
 export function validateSchema<T>(
   schema: z.ZodType<T>,
   data: unknown,
-  t: TranslateFn,
+  t: TranslateFn
 ): ValidationResult<T> {
   const result = schema.safeParse(data);
   if (result.success) {
@@ -64,7 +67,7 @@ export function validateField<T extends z.ZodRawShape>(
   schema: z.ZodObject<T>,
   field: keyof T & string,
   data: Record<string, unknown>,
-  t: TranslateFn,
+  t: TranslateFn
 ): string | undefined {
   const fieldSchema = schema.shape[field] as unknown as z.ZodType | undefined;
   if (!fieldSchema) return undefined;

@@ -6,7 +6,7 @@
 const AI_TASKS = ['website', 'newsletter', 'analysis'];
 
 export function getServerConfig() {
-  const defaultModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
+  const defaultModel = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
 
   return {
     models: {

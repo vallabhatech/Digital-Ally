@@ -1,5 +1,6 @@
 import React, { useState, useCallback, createContext, useEffect } from 'react';
 import { useGeneration } from '@/hooks/useGeneration';
+import { checkGeminiHealth, GeminiHealthStatus } from '@/features/generation/geminiService';
 import { GeminiHealthStatus } from '@/services/geminiService';
 import { LANGUAGES, TRANSLATIONS, COLOR_PALETTES } from '@/shared/constants';
 import { AppContextType } from '@/shared/types';
@@ -25,7 +26,9 @@ import {
 export const AppContext = createContext<AppContextType | null>(null);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(() => loadPrivacyPreference()?.mode || null);
+  const [privacyMode, setPrivacyModeState] = useState<AiProcessingMode | null>(
+    () => loadPrivacyPreference()?.mode || null
+  );
   const [userName, setUserName] = useState('');
   const [businessName, setBusinessName] = useState('');
   const [userEmail, setUserEmail] = useState('');
@@ -67,6 +70,53 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const { generateWebsiteContent, generateNewsletterContent } = useGeneration({ t });
 
+  useEffect(() => {
+    let active = true;
+
+    const validateHealth = async () => {
+      if (privacyMode === 'local') {
+        if (active) {
+          setHealthStatus({
+            ok: true,
+            checked: true,
+            retrying: false,
+            message: 'Local generation mode active.',
+          });
+        }
+        return;
+      }
+      const result = await checkGeminiHealth({ retries: 2, delayMs: 500 });
+      if (active) {
+        setHealthStatus(result);
+      }
+    };
+
+    validateHealth();
+
+    return () => {
+      active = false;
+    };
+  }, [privacyMode]);
+
+  const handleGenerateWrapper = useCallback(
+    async (options?: { modPrompt?: string }) => {
+      if (!healthStatus.ok) {
+        setError(healthStatus.message);
+        setPageState('form');
+        return;
+      }
+
+      const formData = sanitizeFormData({
+        userName,
+        businessName,
+        userEmail,
+        userPhone,
+        prompt,
+        services,
+        location,
+        themeColor,
+        selectedPalette,
+      });
   const setPrivacyMode = useCallback((mode: AiProcessingMode) => {
     savePrivacyPreference(mode);
     setPrivacyModeState(mode);
@@ -100,6 +150,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         },
       });
 
+      if (result.success === true) {
       if (result.success) {
         if (result.code.trim().toLowerCase().startsWith('<!doctype html')) {
           setGeneratedCode(result.code);
@@ -123,6 +174,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
     },
     [
+      healthStatus,
       prompt,
       userName,
       businessName,
@@ -169,6 +221,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setIsGeneratingPost(true);
     setError(null);
+
+    try {
+      const result = await generateNewsletterContent({ prompt, businessName });
+      if (result.success === true) {
+        setNewsletter(result.newsletterText);
+      } else {
+        setError(`Failed to generate newsletter: ${result.error}`);
+      }
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'An unknown error occurred.');
+    } finally {
+      setIsGeneratingPost(false);
     const result = await generateNewsletterContent({ prompt, businessName });
     if (result.success) {
       setNewsletter(result.newsletterText);
@@ -224,6 +288,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     clearPrivacyPreference();
     setPrivacyModeState(null);
   }, [reset]);
+
+  const setPrivacyMode = useCallback((mode: AiProcessingMode) => {
+    savePrivacyPreference(mode);
+    setPrivacyModeState(mode);
+  }, []);
 
   const reviewPrivacyChoice = useCallback(() => {
     clearPrivacyPreference();
